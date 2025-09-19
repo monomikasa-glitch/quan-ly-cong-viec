@@ -296,13 +296,14 @@
 
   // Your web app's Firebase configuration
   const firebaseConfig = {
-  apiKey: "AIzaSyBA98rptMynXX3yVaT9Q9_O8aCcuay8xKY",
-  authDomain: "quan-ly-cong-viec-dl.firebaseapp.com",
-  projectId: "quan-ly-cong-viec-dl",
-  storageBucket: "quan-ly-cong-viec-dl.firebasestorage.app",
-  messagingSenderId: "415835641693",
-  appId: "1:415835641693:web:fabad6ce3f60c0ff6a3ab4"
-};
+    apiKey: "AIzaSyBA98rptMynXX3yVaT9Q9_O8aCcuay8xKY",
+    authDomain: "quan-ly-cong-viec-dl.firebaseapp.com",
+    projectId: "quan-ly-cong-viec-dl",
+    storageBucket: "quan-ly-cong-viec-dl.firebasestorage.app",
+    messagingSenderId: "415835641693",
+    appId: "1:415835641693:web:fabad6ce3f60c0ff6a3ab4"
+  };
+
   // Initialize Firebase
   const app = initializeApp(firebaseConfig);
 </script>
@@ -953,8 +954,6 @@
              * [HÀM TỐI ƯU HÓA] Gửi yêu cầu đến Google Gemini API, hỗ trợ cả văn bản và tệp tin.
              */
             async function callGeminiGenerativeAPI(content, retries = 3, delay = 2000) {
-                const apiKey = "AIzaSyCJoy7aaWT59j17nAJxe1d0bRwY59TX3Fc"; 
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
                 const prompt = `Bạn là một trợ lý hành chính công xuất sắc tại Việt Nam. Phân tích văn bản và trả về kết quả JSON. Luôn trả lời bằng tiếng Việt.
 Yêu cầu:
 1.  **Phân loại Mức độ Quan trọng**: "Khẩn cấp", "Quan trọng", hoặc "Thường".
@@ -1499,14 +1498,17 @@ Thực hiện các nhiệm vụ khác khi được Giám đốc, Phó Giám đ�
     * **issueDate**: Ngày ban hành (YYYY-MM-DD).
     * **dueDate**: Hạn xử lý (YYYY-MM-DD).`;
                 
-                const parts = [{ "text": prompt }];
-                if (content.textContent) {
-                    parts.push({ "text": content.textContent });
-                } else if (content.base64Data) {
-                    const getMimeType = (name, type) => ({'pdf':'application/pdf','doc':'application/msword','docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document','txt':'text/plain'}[name.split('.').pop().toLowerCase()]||type||'application/octet-stream');
-                    parts.push({ "inlineData": { "mimeType": getMimeType(content.fileName, content.rawMimeType), "data": content.base64Data } });
-                }
-                const payload = { "contents": [{ "parts": parts }] };
+                const payload = {
+                    "contents": [{
+                        "parts": [
+                            { "text": prompt },
+                            { "text": textContent } // Đây là nội dung văn bản người dùng nhập
+                        ]
+                    }]
+                };
+
+                const apiKey = "AIzaSyCJoy7aaWT59j17nAJxe1d0bRwY59TX3Fc"; 
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
                 try {
                     let response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -1661,6 +1663,7 @@ Thực hiện các nhiệm vụ khác khi được Giám đốc, Phó Giám đ�
                         addDocAIBtn.addEventListener('click', () => fileUploadInput.click());
                         addDocManualBtn.addEventListener('click', () => openModal());
                         addTextAIBtn.addEventListener('click', openTextAnalysisModal);
+                        submitTextAnalysisBtn.addEventListener('click', handleTextAnalysis); // Dòng đã được bổ sung
                         fileUploadInput.addEventListener('change', handleFileUpload);
                         docForm.addEventListener('submit', handleSubmit);
                         notesForm.addEventListener('submit', handleSaveNote);
@@ -1695,5 +1698,4 @@ Thực hiện các nhiệm vụ khác khi được Giám đốc, Phó Giám đ�
         });
     </script>
 </body>
-
 </html>
