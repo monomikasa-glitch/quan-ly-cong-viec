@@ -1474,7 +1474,7 @@ Phụ trách giải quyết thủ tục hành chính về lĩnh vực đất đa
 
                 const payload = { "contents": [{ "parts": parts }] };
                 const apiKey = "AIzaSyD6zgS07koTtV2rTu1-IkWaED4XcbsJNts";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
                 try {
                     let response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
