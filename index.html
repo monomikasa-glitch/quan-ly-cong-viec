@@ -18,7 +18,7 @@
         @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .document-row:not(.summary-row):hover { background-color: #f1f5f9; }
         .summary-content { transition: max-height 0.5s ease-in-out, padding 0.5s ease-in-out; max-height: 0; overflow: hidden; }
-        .summary-content.open { max-height: 800px; } /* Increased max-height */
+        .summary-content.open { max-height: 2000px; } /* Increased max-height */
         .details-btn svg { transition: transform 0.3s ease; }
         .details-btn.open svg { transform: rotate(90deg); }
         .sortable-header { cursor: pointer; }
@@ -1000,8 +1000,9 @@ const { db, collection, getDocs, doc, setDoc, deleteDoc } = window.firebase; // 
             /**
              * [HÀM TỐI ƯU HÓA] Gửi yêu cầu đến Google Gemini API, hỗ trợ cả văn bản và tệp tin.
              */
-            async function callGeminiGenerativeAPI(content, retries = 3, delay = 2000) {
-                const prompt = `Bạn là một trợ lý hành chính công xuất sắc tại Việt Nam. Phân tích văn bản và trả về kết quả JSON. Luôn trả lời bằng tiếng Việt.
+async function callGeminiGenerativeAPI(content, retries = 3, delay = 2000) {
+    // Tối ưu hóa prompt để yêu cầu AI chỉ trả về JSON
+    const prompt = `Bạn là một trợ lý hành chính công xuất sắc tại Việt Nam. Phân tích văn bản và trả về kết quả JSON. Luôn trả lời bằng tiếng Việt.
 Yêu cầu:
 1.  **Phân loại Mức độ Quan trọng**: "Khẩn cấp", "Quan trọng", hoặc "Thường".
 2.  **Phân công nhiệm vụ**: Dựa vào nội dung, hãy chọn ra **MỘT (01) lãnh đạo**, **MỘT (01)** trưởng/phó phòng, và **MỘT (01)** chuyên viên xử lý chính phù hợp nhất. **Việc phân công là bắt buộc; hãy đưa ra lựa chọn hợp lý nhất ngay cả khi thông tin không hoàn toàn rõ ràng.** **Tuyệt đối không trả về một danh sách nhiều người cho một vai trò**. Ghi rõ họ tên và chức vụ trong ngoặc đơn.
@@ -1526,7 +1527,7 @@ Theo dõi, giám sát, đánh giá, đôn đốc việc giải quyết và trả
 Đề xuất các giải pháp đổi mới, cải tiến nhằm nâng cao chất lượng, hiệu quả phục vụ, tạo thuận lợi cho tổ chức, cá nhân trong thực hiện thủ tục hành chính; tổ chức hoặc phối hợp tổ chức thông tin, tuyên truyền về hoạt động của Trung tâm và việc thực hiện thủ tục hành chính theo quy định.
 Chủ động tham mưu, đề xuất sáng kiến cải tiến việc giải quyết thủ tục hành chính; kịp thời phát hiện, kiến nghị với cơ quan, người có thẩm quyền để sửa đổi, bổ sung, thay đổi hoặc hủy bỏ, bãi bỏ các quy định về thủ tục hành chính trái pháp luật, không khả thi hoặc không phù hợp với tình hình thực tế của bộ, ngành, địa phương.
 Thực hiện các nhiệm vụ khác khi được Giám đốc, Phó Giám đốc phân công.
-3.  **Phân công PHỐI HỢP (nếu có)**: Nếu văn bản yêu cầu sự phối hợp, hãy xác định **MỘT (01) phòng ban phối hợp** và **MỘT (01) chuyên viên phối hợp**. Nếu không có, để trống.
+3.  **Phân công PHỐI HỢP (nếu có)**: Nếu văn bản yêu cầu sự phối hợp, hãy xác định **Phòng ban phối hợp** và **Chuyên viên phối hợp**. Nếu không có, để trống.
     * **Danh sách nhân sự**:
     * **Lãnh đạo UBND**: Nguyễn Hữu Phố (Chủ tịch), Nguyễn Văn Tuấn (P. Chủ tịch), Đinh Thanh Hải (P. Chủ tịch).
     * **Phòng Văn hóa – Xã hội (VHXH)**: Phạm Khắc Chung (Trưởng phòng), Nguyễn Thị Phương (Phó Trưởng phòng), và các chuyên viên.
@@ -1535,15 +1536,13 @@ Thực hiện các nhiệm vụ khác khi được Giám đốc, Phó Giám đ�
     * **Trung tâm Phục vụ hành chính công (HCC)**: Nguyễn Văn Tuấn (Giám đốc), Đinh Văn Bình (Phó Giám đốc), và các chuyên viên.
 4.  **Trích xuất thông tin** (JSON):
     * **title**: Số hiệu và trích yếu.
-    * **lanhDao**: Tên của lãnh đạo xử lý CHÍNH.
-    * **phongBan**: Tên của trưởng/phó phòng xử lý CHÍNH.
-    * **chuyenVien**: Tên của chuyên viên xử lý CHÍNH.
-    * **phongBanPhoiHop**: Tên của trưởng/phó phòng PHỐI HỢP (nếu có).
-    * **chuyenVienPhoiHop**: Tên của chuyên viên PHỐI HỢP (nếu có).
+    * **lanhDao**: Tên của **MỘT (01)** lãnh đạo xử lý. (Dạng chuỗi, không phải mảng).
+    * **phongBan**: Tên của **MỘT (01)** trưởng/phó phòng xử lý. (Dạng chuỗi, không phải mảng).
+    * **chuyenVien**: Tên của **MỘT (01)** chuyên viên xử lý. (Dạng chuỗi, không phải mảng).
     * **priority**: Mức độ quan trọng.
-    * **summary**: Giả sử bạn là đồng chí Tô Lâm- Bí thư đảng cộng sản việt nam, hãy Tóm tắt các nhiệm vụ chính chi tiết.
-    * **issueDate**: Ngày ban hành (YYYY-MM-DD).
-    * **dueDate**: Hạn xử lý (YYYY-MM-DD).`;
+    * **summary**: Giả sử bạn là đồng chí tô lâm, tổng bí thư nước việt nam (không được nói tên ra) luôn giữ vị thế là cấp xã, hãy Tóm tắt các nhiệm vụ chính một cách chi tiết, trình bày rõ ràng bằng các gạch đầu dòng. Nếu có, phải tách riêng các mục sau: "Yêu cầu:", "Sản phẩm đầu ra:", "Thời hạn:", "Đơn vị phối hợp:","Trách nhiệm:","Nội dung chính:", 'Yêu cầu': 'Mục tiêu': 'Nhiệm vụ':, 'Nội dung': , 'Thực hiện': , 'Triển khai': , 'Tổ chức': , 'Chỉ đạo': , 'Phê duyệt': , 'Giải quyết': , 'Xử lý': , 'Đôn đốc': , 'Hướng dẫn': , 'Phổ biến': , 'Tuyên truyền': , 'Sản phẩm': , 'Kết quả': , 'Hoàn thành': , 'Thời hạn': , 'Hạn xử lý': , 'Thời gian': , 'Tiến độ': , 'Khẩn': , 'Hỏa tốc': , 'Mật': , 'Phối hợp': , 'Chủ trì': , 'Thành viên': , 'Lãnh đạo': , 'Công dân': , 'Doanh nghiệp': , 'Ghi chú': , 'Kế hoạch': , 'Phương án': , 'Công văn': , 'Thông báo': , 'Tờ trình': , 'Giấy mời': , 'Tài liệu': ', 'Hồ sơ': , 'Báo cáo': , 'Dự thảo': , 'Quyết định': , 'Nghị quyết': , 'Hợp đồng': , 'Kinh phí':, 'Ngân sách': , 'Dự toán':, 'Tài chính': , 'Tài sản': , 'Nguồn lực': , 'Kiểm tra': , 'Thanh tra': , 'Giám sát': , 'Rà soát': , 'Đánh giá': , 'Lấy ý kiến': , 'Họp': , 'Thành lập': , 'Xây dựng': , 'Đất đai': , 'Môi trường': , 'An ninh': , 'Quốc phòng': , 'PCCC': , 'Giao thông': , 'Thủy lợi': , 'Nông nghiệp': , 'Tư pháp': , 'Nội vụ': , 'Văn hóa': , 'Giáo dục': , 'Y tế': , 'Xã hội': , 'Khiếu nại': , 'Tố cáo': , 'Khen thưởng', 'Kỷ luật', 'Chuyển đổi số', 'Dữ liệu':, Yêu cầu', 'Sản phẩm đầu ra', 'Thời hạn', 'Đơn vị phối hợp', 'Nội dung chính', 'Mục tiêu', 'Ghi chú', 'Kinh phí', 'Báo cáo', 'Thành lập', 'Kiểm tra', 'Họp'.
+* **issueDate**: Ngày ban hành (YYYY-MM-DD), mặc định: ${new Date().toISOString().split('T')[0]}.
+* **dueDate**: Hạn xử lý (YYYY-MM-DD), mặc định: ${new Date(new Date().setDate(new Date().getDate() + 7)).toISOString().split('T')[0]}.`;
                 
 const payload = {
     "contents": [{
