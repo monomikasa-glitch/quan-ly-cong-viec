@@ -1498,14 +1498,14 @@ Thực hiện các nhiệm vụ khác khi được Giám đốc, Phó Giám đ�
     * **issueDate**: Ngày ban hành (YYYY-MM-DD).
     * **dueDate**: Hạn xử lý (YYYY-MM-DD).`;
                 
-                const payload = {
-                    "contents": [{
-                        "parts": [
-                            { "text": prompt },
-                            { "text": textContent } // Đây là nội dung văn bản người dùng nhập
-                        ]
-                    }]
-                };
+const payload = {
+    "contents": [{
+        "parts": [
+            { "text": prompt },
+            { "text": content.textContent } // <--- Sửa thành content.textContent
+        ]
+    }]
+};
 
                 const apiKey = "AIzaSyCJoy7aaWT59j17nAJxe1d0bRwY59TX3Fc"; 
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
