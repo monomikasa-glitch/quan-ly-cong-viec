@@ -533,12 +533,22 @@ const allPersonnel = [
                 renderAll();
             }
            
-            function formatSummary(summaryText, doc) {
+function formatSummary(summaryText, doc) {
+                // [NÂNG CẤP] - Tự động dọn dẹp các ký tự thừa từ AI
+                if (typeof summaryText === 'string') {
+                    summaryText = summaryText
+                        .replace(/`+/g, '') // Xóa các dấu backtick
+                        .replace(/['"\[\]{}]/g, '') // Xóa các loại dấu ngoặc kép, ngoặc vuông, ngoặc nhọn
+                        .replace(/^\s*[:*\-]\s*/gm, '') // Xóa các dấu gạch đầu dòng, sao, hai chấm ở đầu dòng
+                        .replace(/\\n/g, '\n') // Chuyển ký tự xuống dòng \\n thành xuống dòng thật
+                        .trim();
+                }
+
                 let html = '';
                 if (summaryText && summaryText.trim() !== '') {
                     const iconMap = { 'Yêu cầu': '🎯', 'Mục tiêu': '🎯', 'Nhiệm vụ': '📌', 'Nội dung': '📋', 'Thực hiện': '▶️', 'Triển khai': '🚀', 'Tổ chức': '📅', 'Chỉ đạo': '👉', 'Phê duyệt': '✅', 'Giải quyết': '💡', 'Xử lý': '⚙️', 'Đôn đốc': '🏃‍♂️', 'Hướng dẫn': 'ℹ️', 'Phổ biến': '📡', 'Tuyên truyền': '📰', 'Sản phẩm': '📦', 'Kết quả': '🏆', 'Hoàn thành': '🏁', 'Thời hạn': '⏳', 'Hạn xử lý': '⏳', 'Thời gian': '⏰', 'Tiến độ': '📈', 'Khẩn': '🚨', 'Hỏa tốc': '🔥', 'Mật': '🤫', 'Phối hợp': '🤝', 'Chủ trì': '👤', 'Thành viên': '👥', 'Lãnh đạo': '⭐', 'Công dân': '👨‍👩‍👧‍👦', 'Doanh nghiệp': '💼', 'Ghi chú': '📝', 'Kế hoạch': '🗺️', 'Phương án': '🧭', 'Công văn': '✉️', 'Thông báo': '📢', 'Tờ trình': '📤', 'Giấy mời': '💌', 'Tài liệu': '📄', 'Hồ sơ': '📁', 'Báo cáo': '📊', 'Dự thảo': '✍️', 'Quyết định': '⚖️', 'Nghị quyết': '📜', 'Hợp đồng': '📑', 'Kinh phí': '💰', 'Ngân sách': '💵', 'Dự toán': '🧾', 'Tài chính': '🪙', 'Tài sản': '🏦', 'Nguồn lực': '💪', 'Kiểm tra': '🔍', 'Thanh tra': '🔍', 'Giám sát': '👀', 'Rà soát': '🧐', 'Đánh giá': '💯', 'Lấy ý kiến': '🗣️', 'Họp': '👥', 'Thành lập': '🏛️', 'Xây dựng': '🏗️', 'Đất đai': '🏞️', 'Môi trường': '🌿', 'An ninh': '🛡️', 'Quốc phòng': '⚔️', 'PCCC': '🚒', 'Giao thông': '🛣️', 'Thủy lợi': '💧', 'Nông nghiệp': '🌾', 'Tư pháp': '⚖️', 'Nội vụ': '🗄️', 'Văn hóa': '🎭', 'Giáo dục': '🎓', 'Y tế': '⚕️', 'Xã hội': '❤️', 'Khiếu nại': '😠', 'Tố cáo': '🗣️', 'Khen thưởng': '🎖️', 'Kỷ luật': '📜', 'Chuyển đổi số': '🌐', 'Dữ liệu': '💾' };
                     const keywords = ['Yêu cầu', 'Sản phẩm đầu ra', 'Thời hạn', 'Đơn vị phối hợp', 'Nội dung chính', 'Mục tiêu', 'Ghi chú', 'Kinh phí', 'Báo cáo', 'Thành lập', 'Kiểm tra', 'Họp'];
-                    const regex = new RegExp(`(${keywords.join('|')}):`, 'gi');
+                    const regex = new RegExp(`^(${keywords.join('|')}):`, 'gim');
                     const processedText = summaryText.replace(regex, '|||$1:');
                     const parts = processedText.split('|||').filter(p => p.trim() !== '');
 
@@ -564,7 +574,6 @@ const allPersonnel = [
                     html = '<p class="text-gray-600 text-sm">Không có tóm tắt.</p>';
                 }
                 
-                // Thêm thông tin phối hợp
                 if (doc.phongBanPhoiHop) {
                     html += `
                         <div class="flex items-start mt-4 pt-3 border-t border-dashed">
@@ -577,7 +586,6 @@ const allPersonnel = [
                         </div>
                     `;
                 }
-
                 return html;
             }
             // =============================================================
@@ -1017,12 +1025,15 @@ const allPersonnel = [
             /**
              * [HÀM TỐI ƯU HÓA] Gửi yêu cầu đến Google Gemini API, hỗ trợ cả văn bản và tệp tin.
              */
-             async function callGeminiGenerativeAPI(content, retries = 3, delay = 2000) {
-                const prompt = `Bạn là một trợ lý hành chính công xuất sắc tại Việt Nam. Phân tích văn bản và trả về kết quả JSON. Luôn trả lời bằng tiếng Việt.
-Yêu cầu:
-1.  **Phân loại Mức độ Quan trọng**: "Khẩn cấp", "Quan trọng", hoặc "Thường".
-2.  **Phân công nhiệm vụ**: Dựa vào nội dung, hãy chọn ra **MỘT (01)** lãnh đạo, **MỘT (01)** trưởng/phó phòng, và **MỘT (01)** chuyên viên xử lý chính phù hợp nhất. **Việc phân công là bắt buộc; hãy đưa ra lựa chọn hợp lý nhất.**
-    * **Lãnh đạo UBND**: Nguyễn Hữu Phố (Chủ tịch): a) Lãnh đạo, chỉ đạo, điều hành và quản lý toàn diện về mọi hoạt động thuộc chức năng, nhiệm vụ, quyền hạn của UBND xã theo quy định của pháp luật. b) Theo dõi, chỉ đạo: Công an xã, Ban Chỉ huy Quân sự xã và các phòng chuyên môn (về lĩnh vực phụ trách). c) Chỉ đạo, điều hành các lĩnh vực công tác sau:
+            async function callGeminiGenerativeAPI(content, retries = 3, delay = 2000) {
+                // [PROMPT NÂNG CẤP] - Thêm chỉ thị để AI suy luận từng bước và bám sát chức năng nhiệm vụ.
+                const prompt = `Nhiệm vụ của bạn là phân tích văn bản và phân công nhiệm vụ một cách **chính xác nhất** dựa trên **bảng mô tả nhiệm vụ chi tiết** được cung cấp dưới đây. 
+Hãy suy nghĩ từng bước: 
+1. Xác định (các) từ khóa nghiệp vụ chính trong văn bản
+2. Đối chiếu (các) từ khóa đó với bảng mô tả nhiệm vụ của từng cá nhân và phòng ban.
+3. Chọn ra người và phòng ban có chức năng nhiệm vụ **khớp nhất** với từ khóa nghiệp vụ.
+[BẢNG MÔ TẢ NHIỆM VỤ CHI TIẾT CỦA CÁN BỘ, CÔNG CHỨC]
+* **Lãnh đạo UBND**: Nguyễn Hữu Phố (Chủ tịch): a) Lãnh đạo, chỉ đạo, điều hành và quản lý toàn diện về mọi hoạt động thuộc chức năng, nhiệm vụ, quyền hạn của UBND xã theo quy định của pháp luật. b) Theo dõi, chỉ đạo: Công an xã, Ban Chỉ huy Quân sự xã và các phòng chuyên môn (về lĩnh vực phụ trách). c) Chỉ đạo, điều hành các lĩnh vực công tác sau:
 Công tác quy hoạch, kế hoạch hàng năm và 05 năm của xã trình cấp có thẩm quyền xem xét quyết định; tổ chức thực hiện nghị quyết của HĐND cùng cấp; kế hoạch phát triển kinh tế - xã hội của xã; giao đất, cho thuê đất.
 Kế hoạch đầu tư, xây dựng cơ bản; phê duyệt chủ trương đầu tư, kế hoạch lựa chọn nhà thầu về các công trình, dự án lĩnh vực kinh tế, xã hội, quốc phòng, an ninh; phụ trách chung về xúc tiến đầu tư, thu hút đầu tư trên địa bàn xã.
 Quyết định phân bổ, giao dự toán chi đối với các khoản chưa phân bổ chi tiết; quyết định điều chỉnh dự toán ngân sách cấp mình và các nội dung khác ngân sách của địa phương; quản lý, sử dụng có hiệu quả nguồn vốn đầu tư, tài chính, nguồn ngân sách.
@@ -1450,18 +1461,18 @@ Bà Võ Thị Ái Phi, Chuyên viên
 Phụ trách giải quyết thủ tục hành chính về lĩnh vực đất đai tại địa bàn các thôn: 6, 7, 8, 9, 10, Bình Thuận, Đức Đoài, Kẻ Đọng, Minh Đoài, Mỹ Hòa, Mỹ Yên, Thanh Hà, Thanh Lâm, Thanh Sơn, Vinh Đức, Xuân Hòa, Xuân Phong, Xuân Sơn, Xuân Trang, Xuân Thành và Bon Jun Juh.
 Ông Phan Ngọc Long, Chuyên viên
 Phụ trách giải quyết thủ tục hành chính về lĩnh vực đất đai tại địa bàn các thôn: 1, 2, 3, 4, 5, Đức Tân, Đức Nghĩa, Đức Vinh, Đức Sơn, Đức Bình, Đức Trung, Đức Ái, Đức Hiệp, Đức Thành, Đức Thắng, Đức Lợi, Đức Phúc, Đức Lộc, Đức An, Đức Thuận, Đức Hòa, Đức Lễ A, Đức Lễ B.
-3.  **Phân công PHỐI HỢP (nếu có)**: Nếu cần, xác định **Phòng ban phối hợp** và **Chuyên viên phối hợp**. Nếu không, để trống.
-4.  **Trích xuất thông tin** (JSON):
-    * **title**: Số hiệu và trích yếu.
-    * **lanhDao**: Tên ĐẦY ĐỦ của MỘT lãnh đạo (VÍ DỤ: "Nguyễn Văn Tuấn", KHÔNG ghi chức danh).
-    * **phongBan**: Tên ĐẦY ĐỦ của MỘT trưởng/phó phòng (VÍ DỤ: "Văn Minh Diệu", KHÔNG ghi chức danh).
-    * **chuyenVien**: Tên ĐẦY ĐỦ của MỘT chuyên viên (VÍ DỤ: "Nguyễn Công Hiếu", KHÔNG ghi chức danh).
-    * **phongBanPhoiHop**: Tên ĐẦY ĐỦ của MỘT trưởng/phó phòng phối hợp (nếu có).
-    * **chuyenVienPhoiHop**: Tên ĐẦY ĐỦ của MỘT chuyên viên phối hợp (nếu có).
-    * **priority**: Mức độ quan trọng.
-    * **summary**: Giả sử bạn là đồng chí tô lâm, tổng bí thư nước việt nam (không được nói tên ra) luôn giữ vị thế là cấp xã, hãy Tóm tắt các nhiệm vụ chính một cách chi tiết, trình bày rõ ràng bằng các gạch đầu dòng. Nếu có, phải tách riêng các mục sau: "Yêu cầu:", "Sản phẩm đầu ra:", "Thời hạn:", "Đơn vị phối hợp:","Trách nhiệm:","Nội dung chính:", 'Yêu cầu': 'Mục tiêu': 'Nhiệm vụ':, 'Nội dung': , 'Thực hiện': , 'Triển khai': , 'Tổ chức': , 'Chỉ đạo': , 'Phê duyệt': , 'Giải quyết': , 'Xử lý': , 'Đôn đốc': , 'Hướng dẫn': , 'Phổ biến': , 'Tuyên truyền': , 'Sản phẩm': , 'Kết quả': , 'Hoàn thành': , 'Thời hạn': , 'Hạn xử lý': , 'Thời gian': , 'Tiến độ': , 'Khẩn': , 'Hỏa tốc': , 'Mật': , 'Phối hợp': , 'Chủ trì': , 'Thành viên': , 'Lãnh đạo': , 'Công dân': , 'Doanh nghiệp': , 'Ghi chú': , 'Kế hoạch': , 'Phương án': , 'Công văn': , 'Thông báo': , 'Tờ trình': , 'Giấy mời': , 'Tài liệu': ', 'Hồ sơ': , 'Báo cáo': , 'Dự thảo': , 'Quyết định': , 'Nghị quyết': , 'Hợp đồng': , 'Kinh phí':, 'Ngân sách': , 'Dự toán':, 'Tài chính': , 'Tài sản': , 'Nguồn lực': , 'Kiểm tra': , 'Thanh tra': , 'Giám sát': , 'Rà soát': , 'Đánh giá': , 'Lấy ý kiến': , 'Họp': , 'Thành lập': , 'Xây dựng': , 'Đất đai': , 'Môi trường': , 'An ninh': , 'Quốc phòng': , 'PCCC': , 'Giao thông': , 'Thủy lợi': , 'Nông nghiệp': , 'Tư pháp': , 'Nội vụ': , 'Văn hóa': , 'Giáo dục': , 'Y tế': , 'Xã hội': , 'Khiếu nại': , 'Tố cáo': , 'Khen thưởng', 'Kỷ luật', 'Chuyển đổi số', 'Dữ liệu':, Yêu cầu', 'Sản phẩm đầu ra', 'Thời hạn', 'Đơn vị phối hợp', 'Nội dung chính', 'Mục tiêu', 'Ghi chú', 'Kinh phí', 'Báo cáo', 'Thành lập', 'Kiểm tra', 'Họp'.
-    * **issueDate**: Ngày ban hành (YYYY-MM-DD), mặc định: ${new Date().toISOString().split('T')[0]}.
-    * **dueDate**: Hạn xử lý (YYYY-MM-DD), mặc định: ${new Date(new Date().setDate(new Date().getDate() + 7)).toISOString().split('T')[0]}.`;
+Sau khi phân tích, hãy trả về kết quả dưới dạng một đối tượng JSON duy nhất, không có giải thích thêm.
+Yêu cầu JSON:
+* **title**: Số hiệu và trích yếu.
+* **lanhDao**: Tên ĐẦY ĐỦ của MỘT lãnh đạo
+* **phongBan**: Tên ĐẦY ĐỦ của MỘT trưởng/phó phòng
+* **chuyenVien**: Tên ĐẦY ĐỦ của MỘT chuyên viên
+* **phongBanPhoiHop**: Tên ĐẦY ĐỦ của MỘT trưởng/phó phòng phối hợp (nếu có).
+* **chuyenVienPhoiHop**: Tên ĐẦY ĐỦ của MỘT chuyên viên phối hợp (nếu có).
+* **priority**: Phân loại mức độ: "Khẩn cấp", "Quan trọng", hoặc "Thường".
+* **summary**: Giả sử bạn là đồng chí tô lâm, tổng bí thư nước việt nam (không được nói tên ra) luôn giữ vị thế là cấp xã, hãy Tóm tắt các nhiệm vụ chính một cách chi tiết, trình bày rõ ràng bằng các gạch đầu dòng. Nếu có, phải tách riêng các mục sau: "Yêu cầu:", "Sản phẩm đầu ra:", "Thời hạn:", "Đơn vị phối hợp:","Trách nhiệm:","Nội dung chính:", 'Yêu cầu': 'Mục tiêu': 'Nhiệm vụ':, 'Nội dung': , 'Thực hiện': , 'Triển khai': , 'Tổ chức': , 'Chỉ đạo': , 'Phê duyệt': , 'Giải quyết': , 'Xử lý': , 'Đôn đốc': , 'Hướng dẫn': , 'Phổ biến': , 'Tuyên truyền': , 'Sản phẩm': , 'Kết quả': , 'Hoàn thành': , 'Thời hạn': , 'Hạn xử lý': , 'Thời gian': , 'Tiến độ': , 'Khẩn': , 'Hỏa tốc': , 'Mật': , 'Phối hợp': , 'Chủ trì': , 'Thành viên': , 'Lãnh đạo': , 'Công dân': , 'Doanh nghiệp': , 'Ghi chú': , 'Kế hoạch': , 'Phương án': , 'Công văn': , 'Thông báo': , 'Tờ trình': , 'Giấy mời': , 'Tài liệu': ', 'Hồ sơ': , 'Báo cáo': , 'Dự thảo': , 'Quyết định': , 'Nghị quyết': , 'Hợp đồng': , 'Kinh phí':, 'Ngân sách': , 'Dự toán':, 'Tài chính': , 'Tài sản': , 'Nguồn lực': , 'Kiểm tra': , 'Thanh tra': , 'Giám sát': , 'Rà soát': , 'Đánh giá': , 'Lấy ý kiến': , 'Họp': , 'Thành lập': , 'Xây dựng': , 'Đất đai': , 'Môi trường': , 'An ninh': , 'Quốc phòng': , 'PCCC': , 'Giao thông': , 'Thủy lợi': , 'Nông nghiệp': , 'Tư pháp': , 'Nội vụ': , 'Văn hóa': , 'Giáo dục': , 'Y tế': , 'Xã hội': , 'Khiếu nại': , 'Tố cáo': , 'Khen thưởng', 'Kỷ luật', 'Chuyển đổi số', 'Dữ liệu':, Yêu cầu', 'Sản phẩm đầu ra', 'Thời hạn', 'Đơn vị phối hợp', 'Nội dung chính', 'Mục tiêu', 'Ghi chú', 'Kinh phí', 'Báo cáo', 'Thành lập', 'Kiểm tra', 'Họp'. **QUAN TRỌNG: Chỉ trả về nội dung text thuần túy, loại bỏ tất cả các ký tự định dạng markdown như dấu sao (*), dấu ngoặc kép, ngoặc vuông.**
+* **issueDate**: Ngày ban hành (YYYY-MM-DD), mặc định: ${new Date().toISOString().split('T')[0]}.
+* **dueDate**: Hạn xử lý (YYYY-MM-DD), mặc định: ${new Date(new Date().setDate(new Date().getDate() + 7)).toISOString().split('T')[0]}.`;
                 
                 const parts = [{ "text": prompt }];
                 if (content.textContent) {
