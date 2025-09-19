@@ -291,8 +291,8 @@
 <script type="module">
   // Import the functions you need from the SDKs you need
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
+  // BỔ SUNG: Import các hàm cần thiết của Firestore
+  import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
   // Your web app's Firebase configuration
   const firebaseConfig = {
@@ -306,9 +306,12 @@
 
   // Initialize Firebase
   const app = initializeApp(firebaseConfig);
+  // BỔ SUNG: Khởi tạo dịch vụ Firestore và export để script chính có thể sử dụng
+window.db = getFirestore(app);
 </script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+const { db } = window; // Import đối tượng 'db' từ script module ở trên
             // =============================================================
             // KHAI BÁO BIẾN VÀ DOM ELEMENTS
             // =============================================================
@@ -565,12 +568,15 @@
             // CÁC HÀM LOGIC CỦA ỨNG DỤNG
             // =============================================================
 
-            function saveDocuments() {
-                localStorage.setItem('documents', JSON.stringify(documents));
-            }
-
-            function loadDocuments() {
-                documents = JSON.parse(localStorage.getItem('documents')) || [];
+            async function loadDocuments() {
+                try {
+                    const querySnapshot = await getDocs(collection(db, "documents"));
+                    documents = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                } catch (error) {
+                    console.error("Lỗi khi tải dữ liệu từ Firebase: ", error);
+                    alert("Không thể kết nối đến cơ sở dữ liệu. Vui lòng kiểm tra lại kết nối mạng.");
+                    documents = []; // Reset về mảng rỗng nếu lỗi
+                }
             }
             
             function getWeekInfo(d) {
@@ -838,7 +844,7 @@
                 setTimeout(() => exportModal.classList.add('hidden'), 300);
             }
 
-            function handleSubmit(e) {
+            async function handleSubmit(e) {
                 e.preventDefault();
                 const id = docIdInput.value;
                 const docData = {
@@ -848,73 +854,107 @@
                     phongBanPhoiHop: selectPhongBanPhoiHop.value, chuyenVienPhoiHop: selectChuyenVienPhoiHop.value,
                     status: docStatusInput.value, priority: docPriorityInput.value, recurringType: docRecurringInput.value,
                 };
-                if (id) {
-                    const index = documents.findIndex(doc => doc.id == Number(id));
-                    if (index !== -1) documents[index] = { ...documents[index], ...docData };
-                } else {
-                    docData.id = Date.now();
-                    documents.push(docData);
+
+                try {
+                    if (id) { // Cập nhật công việc đã có
+                        const docRef = doc(db, "documents", id);
+                        await setDoc(docRef, docData, { merge: true }); // Dùng merge để không ghi đè các trường khác
+                        const index = documents.findIndex(d => d.id == id);
+                        if (index !== -1) documents[index] = { ...documents[index], ...docData };
+                    } else { // Thêm công việc mới
+                        const newDocRef = doc(collection(db, "documents")); // Tự tạo ID mới
+                        docData.id = newDocRef.id;
+                        await setDoc(newDocRef, docData);
+                        documents.push(docData);
+                    }
+                    renderAll();
+                    closeModal();
+                } catch (error) {
+                    console.error("Lỗi khi lưu dữ liệu: ", error);
+                    alert("Đã xảy ra lỗi khi lưu công việc. Vui lòng thử lại.");
                 }
-                saveDocuments();
-                renderAll();
-                closeModal();
             }
 
             function handleEdit(e) {
-                const id = Number(e.currentTarget.dataset.id);
+                const id = e.currentTarget.dataset.id;
                 const docToEdit = documents.find(doc => doc.id === id);
                 if (docToEdit) openModal(docToEdit);
             }
             
              function handleEditNotes(e) {
-                const id = Number(e.currentTarget.dataset.id);
+                const id = e.currentTarget.dataset.id;
                 const docToEdit = documents.find(doc => doc.id === id);
                 if (docToEdit) openNotesModal(docToEdit);
             }
 
-            function handleSaveNote(e) {
+            async function handleSaveNote(e) {
                 e.preventDefault();
-                const id = Number(notesDocIdInput.value);
-                const doc = documents.find(d => d.id === id);
-                if (doc) {
+                const id = notesDocIdInput.value;
+                const docToUpdate = documents.find(d => d.id === id);
+                if (docToUpdate) {
                     const now = new Date();
                     const timestamp = `[Cập nhật lúc: ${now.toLocaleTimeString('vi-VN')} ${now.toLocaleDateString('vi-VN')}]`;
                     const newNoteContent = editDocNotesInput.value;
-                    const oldNotes = doc.notes ? doc.notes.split('\n').filter(line => !line.startsWith('[Cập nhật lúc:')).join('\n').trim() : '';
-                    doc.notes = `${timestamp}\n${newNoteContent}\n\n${oldNotes}`.trim();
-                    saveDocuments();
-                    renderAll();
-                    closeNotesModal();
+                    const oldNotes = docToUpdate.notes ? docToUpdate.notes.split('\n').filter(line => !line.startsWith('[Cập nhật lúc:')).join('\n').trim() : '';
+                    const updatedNotes = `${timestamp}\n${newNoteContent}\n\n${oldNotes}`.trim();
+
+                    try {
+                        const docRef = doc(db, "documents", id);
+                        await setDoc(docRef, { notes: updatedNotes }, { merge: true }); // Chỉ cập nhật trường notes
+                        docToUpdate.notes = updatedNotes; // Cập nhật local data
+                        renderAll();
+                        closeNotesModal();
+                    } catch (error) {
+                         console.error("Lỗi khi lưu ghi chú: ", error);
+                         alert("Đã xảy ra lỗi khi lưu ghi chú.");
+                    }
                 }
             }
             
-            function handleStatusChange(e) {
-                const id = Number(e.currentTarget.dataset.id);
-                const doc = documents.find(d => d.id === id);
-                if (doc) {
-                    if (doc.status === 'pending' && doc.recurringType && doc.recurringType !== 'none') {
-                        const currentDueDate = new Date(doc.dueDate);
+            async function handleStatusChange(e) {
+                const id = e.currentTarget.dataset.id;
+                const docToUpdate = documents.find(d => d.id === id);
+                if (docToUpdate) {
+                    let updatedData = {};
+                    if (docToUpdate.status === 'pending' && docToUpdate.recurringType && docToUpdate.recurringType !== 'none') {
+                        // Xử lý công việc lặp lại
+                        const currentDueDate = new Date(docToUpdate.dueDate);
                         let nextDueDate;
-                        switch (doc.recurringType) {
+                        switch (docToUpdate.recurringType) {
                             case 'daily': nextDueDate = new Date(currentDueDate.setDate(currentDueDate.getDate() + 1)); break;
                             case 'weekly': nextDueDate = new Date(currentDueDate.setDate(currentDueDate.getDate() + 7)); break;
                             case 'monthly': nextDueDate = new Date(currentDueDate.setMonth(currentDueDate.getMonth() + 1)); break;
                         }
-                        if (nextDueDate) doc.dueDate = nextDueDate.toISOString().slice(0, 10);
-                        else doc.status = 'completed';
+                        updatedData.dueDate = nextDueDate ? nextDueDate.toISOString().slice(0, 10) : docToUpdate.dueDate;
+                        if (!nextDueDate) updatedData.status = 'completed';
                     } else {
-                        doc.status = doc.status === 'completed' ? 'pending' : 'completed';
+                        updatedData.status = docToUpdate.status === 'completed' ? 'pending' : 'completed';
                     }
-                    saveDocuments();
-                    renderAll();
+                    
+                    try {
+                        const docRef = doc(db, "documents", id);
+                        await setDoc(docRef, updatedData, { merge: true });
+                        Object.assign(docToUpdate, updatedData); // Cập nhật local data
+                        renderAll();
+                    } catch (error) {
+                        console.error("Lỗi khi cập nhật trạng thái: ", error);
+                        alert("Đã xảy ra lỗi khi cập nhật trạng thái.");
+                    }
                 }
             }
 
-            function handleDelete(e) {
-                const id = Number(e.currentTarget.dataset.id);
-                documents = documents.filter(doc => doc.id !== id);
-                saveDocuments();
-                renderAll();
+            async function handleDelete(e) {
+                const id = e.currentTarget.dataset.id;
+                if (confirm('Đồng chí có chắc chắn muốn xóa công việc này không?')) {
+                    try {
+                        await deleteDoc(doc(db, "documents", id));
+                        documents = documents.filter(doc => doc.id !== id);
+                        renderAll();
+                    } catch (error) {
+                        console.error("Lỗi khi xóa: ", error);
+                        alert("Đã xảy ra lỗi khi xóa công việc.");
+                    }
+                }
             }
 
             function setSort(column) {
@@ -1635,12 +1675,14 @@ const payload = {
             // =============================================================
             // KHỞI TẠO ỨNG DỤNG
             // =============================================================
-            function initializeApp() {
+            async function initializeApp() {
                 currentUserRole = sessionStorage.getItem('userRole');
                 if (currentUserRole) {
                     loginScreen.classList.add('hidden');
                     appScreen.classList.remove('hidden');
-                    loadDocuments();
+                    
+                    await loadDocuments(); // Dùng await để chờ tải xong dữ liệu
+                    
                     populateAllDropdowns();
                     applyPermissions();
                     
