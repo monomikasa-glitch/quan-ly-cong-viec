@@ -307,11 +307,18 @@
   // Initialize Firebase
   const app = initializeApp(firebaseConfig);
   // BỔ SUNG: Khởi tạo dịch vụ Firestore và export để script chính có thể sử dụng
-window.db = getFirestore(app);
+window.firebase = {
+  db: getFirestore(app),
+  collection,
+  getDocs,
+  doc,
+  setDoc,
+  deleteDoc
+};
 </script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-const { db } = window; // Import đối tượng 'db' từ script module ở trên
+const { db, collection, getDocs, doc, setDoc, deleteDoc } = window.firebase; // Import đối tượng 'db' từ script module ở trên
             // =============================================================
             // KHAI BÁO BIẾN VÀ DOM ELEMENTS
             // =============================================================
