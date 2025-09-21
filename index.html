@@ -151,15 +151,6 @@
                              <label for="chuyenvien-filter" class="text-sm font-medium text-gray-700 whitespace-nowrap">Chuyên viên:</label>
                              <select id="chuyenvien-filter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm"><option value="all">Tất cả</option></select>
                         </div>
-                        <div class="flex items-center space-x-2">
-                             <label for="priority-filter" class="text-sm font-medium text-gray-700 whitespace-nowrap">Mức độ:</label>
-                             <select id="priority-filter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm">
-                                <option value="all">Tất cả</option>
-                                <option value="Thường">Thường</option>
-                                <option value="Quan trọng">Quan trọng</option>
-                                <option value="Khẩn cấp">Khẩn cấp</option>
-                            </select>
-                        </div>
                     </div>
                 </div>
                 
@@ -205,7 +196,10 @@
                              <div><label for="select-phong-ban-phoihop" class="block text-sm font-medium text-gray-700 mb-1">Phòng ban Phối hợp</label><select id="select-phong-ban-phoihop" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"></select></div>
                              <div class="mt-4"><label for="select-chuyen-vien-phoihop" class="block text-sm font-medium text-gray-700 mb-1">Chuyên viên Phối hợp</label><select id="select-chuyen-vien-phoihop" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"></select></div>
                          </div>
-                         <div><label for="doc-priority" class="block text-sm font-medium text-gray-700 mb-1">Mức độ quan trọng</label><select id="doc-priority" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"><option value="Thường">Thường</option><option value="Quan trọng">Quan trọng</option><option value="Khẩn cấp">Khẩn cấp</option></select></div>
+                         <div>
+    <label for="doc-priority-score" class="block text-sm font-medium text-gray-700 mb-1">Mức độ quan trọng (<span id="priority-score-value" class="font-bold text-blue-600">50</span>/100)</label>
+    <input type="range" id="doc-priority-score" min="1" max="100" value="50" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+</div>
                         
                         <div class="flex items-center justify-between">
                             <div><label for="doc-status" class="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label><select id="doc-status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"><option value="pending">Chưa hoàn thành</option><option value="completed">Đã hoàn thành</option></select></div>
@@ -365,7 +359,6 @@ const { db, collection, getDocs, doc, setDoc, deleteDoc } = window.firebase; // 
             const statusFilter = document.getElementById('status-filter');
             const phongbanFilter = document.getElementById('phongban-filter');
             const chuyenvienFilter = document.getElementById('chuyenvien-filter');
-            const priorityFilter = document.getElementById('priority-filter');
             const exportReportBtn = document.getElementById('export-report-btn');
 
             const sortHeaders = {
@@ -382,7 +375,6 @@ const { db, collection, getDocs, doc, setDoc, deleteDoc } = window.firebase; // 
             const docDueDateInput = document.getElementById('doc-due-date');
             const docStatusInput = document.getElementById('doc-status');
             const docRecurringInput = document.getElementById('doc-recurring');
-            const docPriorityInput = document.getElementById('doc-priority');
             const selectLanhDao = document.getElementById('select-lanh-dao');
             const selectPhongBan = document.getElementById('select-phong-ban');
             const selectChuyenVien = document.getElementById('select-chuyen-vien');
@@ -408,14 +400,38 @@ const { db, collection, getDocs, doc, setDoc, deleteDoc } = window.firebase; // 
             // DỮ LIỆU NHÂN SỰ (HARDCODED)
             // =============================================================
 function findAndSelectPersonnel(selectElement, personnelName) {
-    if (!personnelName || !selectElement) return;
+    if (!personnelName || typeof personnelName !== 'string' || !selectElement) return;
+
+    // Hàm chuẩn hóa tên: loại bỏ chức danh trong ngoặc, chuyển thành chữ thường, bỏ dấu tiếng Việt.
+    const normalize = (str) => {
+        return str.split('(')[0].trim().toLowerCase()
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    };
+
+    const normalizedPersonnelName = normalize(personnelName);
+    if (!normalizedPersonnelName) return;
+
     const options = Array.from(selectElement.options);
-    const bestMatch = options.find(option => option.value.toLowerCase().includes(personnelName.toLowerCase()));
+
+    // 1. Ưu tiên tìm kiếm kết quả khớp hoàn toàn sau khi đã chuẩn hóa
+    let bestMatch = options.find(option => normalize(option.value) === normalizedPersonnelName);
+
+    // 2. Nếu không khớp hoàn toàn, thử tìm kiếm xem tên trong tùy chọn có chứa tên do AI trả về không
+    if (!bestMatch) {
+         bestMatch = options.find(option => normalize(option.value).includes(normalizedPersonnelName));
+    }
+    
+    // 3. Nếu vẫn không khớp, thử tìm ngược lại xem tên AI trả về có chứa tên trong tùy chọn không
+     if (!bestMatch) {
+         bestMatch = options.find(option => normalizedPersonnelName.includes(normalize(option.value)));
+    }
+
     if (bestMatch) {
         selectElement.value = bestMatch.value;
-        selectElement.dispatchEvent(new Event('change'));
+        // Kích hoạt sự kiện 'change' để cập nhật các ô lựa chọn phụ thuộc (ví dụ: chuyên viên theo phòng ban)
+        selectElement.dispatchEvent(new Event('change', { 'bubbles': true }));
     }
-}            
+}          
 const allPersonnel = [
     { name: 'Nguyễn Hữu Phố (Chủ tịch)', rank: 1, department: 'UBND' },
                 { name: 'Nguyễn Văn Tuấn (P. Chủ tịch)', rank: 2, department: 'UBND' },
@@ -631,12 +647,14 @@ function formatSummary(summaryText, doc) {
                 return { text: `Còn ${days} ngày`, color: 'bg-green-500 text-white' };
             }
 
-            function getPriorityInfo(priority) {
-                switch (priority) {
-                    case 'Khẩn cấp': return { text: 'Khẩn cấp', color: 'bg-red-600 text-white' };
-                    case 'Quan trọng': return { text: 'Quan trọng', color: 'bg-yellow-500 text-white' };
-                    default: return { text: 'Thường', color: 'bg-blue-500 text-white' };
-                }
+            function getPriorityInfo(score) {
+    score = parseInt(score, 10) || 0;
+    if (score >= 90) return { text: `Hỏa tốc (${score})`, color: 'bg-red-700 text-white' };
+    if (score >= 75) return { text: `Khẩn cấp (${score})`, color: 'bg-red-500 text-white' };
+    if (score >= 50) return { text: `Quan trọng (${score})`, color: 'bg-yellow-500 text-white' };
+    if (score >= 25) return { text: `Thường (${score})`, color: 'bg-blue-500 text-white' };
+    return { text: `Thấp (${score})`, color: 'bg-gray-500 text-white' };
+}
             }
 
             function updateSortButtons() {
@@ -671,7 +689,6 @@ function formatSummary(summaryText, doc) {
                     const status = statusFilter.value;
                     const phongBan = phongbanFilter.value;
                     const chuyenVien = chuyenvienFilter.value;
-                    const priority = priorityFilter.value;
                     if (searchTerm && !(doc.title.toLowerCase().includes(searchTerm) || doc.summary.toLowerCase().includes(searchTerm) || (doc.notes && doc.notes.toLowerCase().includes(searchTerm)))) return false;
                     if (status !== 'all') {
                          if (status === 'overdue') { if (doc.status !== 'pending' || calculateDaysRemaining(doc.dueDate) >= 0) return false; } 
@@ -680,8 +697,6 @@ function formatSummary(summaryText, doc) {
                     }
                     if (phongBan !== 'all' && doc.phongBan !== phongBan) return false;
                     if (chuyenVien !== 'all' && doc.chuyenVien !== chuyenVien) return false;
-                    if (priority !== 'all' && doc.priority !== priority) return false;
-                    return true;
                 });
                 emptyState.classList.toggle('hidden', filteredDocuments.length > 0);
                 const priorityOrder = { 'Khẩn cấp': 3, 'Quan trọng': 2, 'Thường': 1 };
@@ -702,14 +717,14 @@ function formatSummary(summaryText, doc) {
 
                     weekData.docs.sort((a, b) => {
                         let compare = 0;
-                        if (sortBy === 'priority') compare = (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
+                        if (sortBy === 'priority') compare = (b.priorityScore || 0) - (a.priorityScore || 0);
                         else if (sortBy === 'dueDate') compare = new Date(a.dueDate) - new Date(b.dueDate);
                         else if (sortBy === 'status') compare = a.status.localeCompare(b.status);
                         return sortOrder === 'desc' ? -compare : compare;
                     }).forEach(doc => {
                         const daysRemaining = calculateDaysRemaining(doc.dueDate);
                         const { text: statusText, color: statusColor } = getStatusInfo(daysRemaining, doc.status);
-                        const { text: priorityText, color: priorityColor } = getPriorityInfo(doc.priority);
+                        const { text: priorityText, color: priorityColor } = getPriorityInfo(doc.priorityScore);
                         const summaryHtml = formatSummary(doc.summary, doc);
                         const notesHtml = doc.notes ? `<h4 class="text-sm font-semibold text-gray-700 mt-4 mb-2">Lịch sử Ghi chú:</h4><div class="text-gray-600 text-sm whitespace-pre-wrap bg-yellow-50 p-3 rounded-md">${doc.notes}</div>` : '';
                         const isCompleted = doc.status === 'completed';
@@ -832,7 +847,16 @@ function formatSummary(summaryText, doc) {
                     docIssueDateInput.value = doc.issueDate || new Date().toISOString().slice(0, 10);
                     docDueDateInput.value = doc.dueDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
                     docStatusInput.value = doc.status || 'pending';
-                    docPriorityInput.value = doc.priority || 'Thường';
+const priorityScoreInput = document.getElementById('doc-priority-score');
+const priorityScoreValue = document.getElementById('priority-score-value');
+const score = doc.priorityScore || 50; // Lấy điểm từ AI hoặc mặc định là 50
+priorityScoreInput.value = score;
+priorityScoreValue.textContent = score;
+
+// Cập nhật giá trị hiển thị khi người dùng kéo thanh trượt
+priorityScoreInput.oninput = function() {
+    priorityScoreValue.textContent = this.value;
+}
                     docRecurringInput.value = doc.recurringType || 'none';
                     populateModalDropdowns(doc);
                 } else {
@@ -884,7 +908,7 @@ function formatSummary(summaryText, doc) {
                     issueDate: docIssueDateInput.value, dueDate: docDueDateInput.value, lanhDao: selectLanhDao.value,
                     phongBan: selectPhongBan.value, chuyenVien: selectChuyenVien.value, 
                     phongBanPhoiHop: selectPhongBanPhoiHop.value, chuyenVienPhoiHop: selectChuyenVienPhoiHop.value,
-                    status: docStatusInput.value, priority: docPriorityInput.value, recurringType: docRecurringInput.value,
+                    status: docStatusInput.value, priorityScore: parseInt(document.getElementById('doc-priority-score').value, 10), recurringType: docRecurringInput.value,
                 };
 
                 try {
@@ -1027,9 +1051,9 @@ function formatSummary(summaryText, doc) {
              */
             async function callGeminiGenerativeAPI(content, retries = 3, delay = 2000) {
                 // [PROMPT TỐI ƯU HÓA] - Rút gọn, tập trung vào danh sách nhân sự và cung cấp ví dụ mẫu để AI học theo.
-                  const prompt = `Bạn là một trợ lý hành chính công xuất sắc tại Việt Nam. Phân tích văn bản và trả về kết quả JSON. Luôn trả lời bằng tiếng Việt.
+const prompt = `Trong vai trò là Thủ tướng Chính phủ nước Cộng hòa xã hội chủ nghĩa Việt Nam - Phạm Minh Chính, đồng chí hãy nghiên cứu kỹ nội dung văn bản được giao. Với tinh thần chỉ đạo quyết liệt, toàn diện, hiệu quả, "việc hôm nay chớ để ngày mai", đồng chí hãy đưa ra các quyết sách phân công, chỉ đạo xử lý và trả về kết quả dưới định dạng JSON.
 Yêu cầu:
-1.  **Phân loại Mức độ Quan trọng**: "Khẩn cấp", "Quan trọng", hoặc "Thường".
+1.  **Đánh giá tầm quan trọng (chấm điểm)**: Dựa trên tính chất, độ khó, tính khẩn cấp và tầm ảnh hưởng của công việc, hãy cho một điểm số từ 1 đến 100.
 2.  **Phân công nhiệm vụ**: Dựa vào nội dung, hãy chọn ra **MỘT (01) lãnh đạo**, **MỘT (01)** trưởng/phó phòng, và **MỘT (01)** chuyên viên xử lý chính phù hợp nhất. **Việc phân công là bắt buộc; hãy đưa ra lựa chọn hợp lý nhất ngay cả khi thông tin không hoàn toàn rõ ràng.** **Tuyệt đối không trả về một danh sách nhiều người cho một vai trò**. Ghi rõ họ tên và chức vụ trong ngoặc đơn.
     * **Lãnh đạo UBND**: 1. Nguyễn Hữu Phố (Chủ tịch): a) Lãnh đạo, chỉ đạo, điều hành và quản lý toàn diện về mọi hoạt động thuộc chức năng, nhiệm vụ, quyền hạn của UBND xã theo quy định của pháp luật. b) Theo dõi, chỉ đạo: Công an xã, Ban Chỉ huy Quân sự xã và các phòng chuyên môn (về lĩnh vực phụ trách). c) Chỉ đạo, điều hành các lĩnh vực công tác sau:
 Công tác quy hoạch, kế hoạch hàng năm và 05 năm của xã trình cấp có thẩm quyền xem xét quyết định; tổ chức thực hiện nghị quyết của HĐND cùng cấp; kế hoạch phát triển kinh tế - xã hội của xã; giao đất, cho thuê đất.
@@ -1464,11 +1488,29 @@ Phụ trách giải quyết thủ tục hành chính về lĩnh vực đất đa
     * **lanhDao**: Tên của **MỘT (01)** lãnh đạo xử lý. (Dạng chuỗi, không phải mảng).
     * **phongBan**: Tên của **MỘT (01)** trưởng/phó phòng xử lý. (Dạng chuỗi, không phải mảng).
     * **chuyenVien**: Tên của **MỘT (01)** chuyên viên xử lý. (Dạng chuỗi, không phải mảng).
-    * **priority**: Mức độ quan trọng.
-    * **summary**: Tóm tắt các nhiệm vụ chính một cách chi tiết, trình bày rõ ràng bằng các gạch đầu dòng. Nếu có, phải tách riêng các mục sau: "Yêu cầu:", "Sản phẩm đầu ra:", "Thời hạn:", "Đơn vị phối hợp:".
-* **issueDate**: Ngày ban hành (YYYY-MM-DD), mặc định: ${new Date().toISOString().split('T')[0]}.
-* **dueDate**: Hạn xử lý (YYYY-MM-DD), mặc định: ${new Date(new Date().setDate(new Date().getDate() + 7)).toISOString().split('T')[0]}.`;
-               
+    * **phongBanPhoiHop**: Tên của **MỘT (01)** trưởng/phó phòng phối hợp (nếu có).
+    * **chuyenVienPhoiHop**: Tên của **MỘT (01)** chuyên viên phối hợp (nếu có).
+    * **priorityScore**: Chấm điểm mức độ quan trọng từ 1 đến 100 (số nguyên).
+    * **summary**: Giả sử bạn là đồng chí tô lâm (bí thư đảng cộng sản việt nam, luôn giấu danh tính) hãy tóm tắt, chỉ đạo bằng các gạch đầu dòng.
+    * **issueDate**: Ngày ban hành (YYYY-MM-DD), mặc định: ${new Date().toISOString().split('T')[0]}.
+    * **dueDate**: Hạn xử lý (YYYY-MM-DD), mặc định: ${new Date(new Date().setDate(new Date().getDate() + 7)).toISOString().split('T')[0]}.
+
+**Ví dụ định dạng JSON trả về (BẮT BUỘC tuân thủ):**
+\`\`\`json
+{
+  "title": "V/v Báo cáo tình hình thực hiện nhiệm vụ kinh tế - xã hội",
+  "lanhDao": "Nguyễn Văn Tuấn (P. Chủ tịch)",
+  "phongBan": "Văn Minh Diệu (Trưởng phòng KT)",
+  "chuyenVien": "Nguyễn Công Hiếu (Chuyên viên KT)",
+  "phongBanPhoiHop": "Trần Văn Giới (Chánh VP)",
+  "chuyenVienPhoiHop": "Nguyễn Minh Hạ (Chuyên viên VP)",
+  "priority": "85",
+  "summary": "- Yêu cầu: Báo cáo tình hình kinh tế xã hội 6 tháng đầu năm.\\n- Sản phẩm đầu ra: 01 bản báo cáo hoàn chỉnh.\\n- Thời hạn: Trước ngày 15/7/2025.",
+  "issueDate": "2025-07-01",
+  "dueDate": "2025-07-15"
+}
+\`\`\`
+`;               
  const parts = [{ "text": prompt }];
                 if (content.textContent) {
                     parts.push({ "text": content.textContent });
@@ -1646,7 +1688,7 @@ Phụ trách giải quyết thủ tục hành chính về lĩnh vực đất đa
                         setInterval(checkAndSendNotifications, 60 * 1000 * 30);
                         checkAndSendNotifications();
                     }
-                    [searchInput, statusFilter, phongbanFilter, chuyenvienFilter, priorityFilter].forEach(el => el?.addEventListener('input', renderDocuments));
+                    [searchInput, statusFilter, phongbanFilter, chuyenvienFilter].forEach(el => el?.addEventListener('input', renderDocuments));
                     exportReportBtn.addEventListener('click', openExportModal);
                     document.querySelectorAll('.export-option-btn').forEach(btn => btn.addEventListener('click', (e) => handleExportReport(e.currentTarget.dataset.type)));
                     closeModalBtn.addEventListener('click', closeModal);
