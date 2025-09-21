@@ -1027,9 +1027,10 @@ function formatSummary(summaryText, doc) {
              */
             async function callGeminiGenerativeAPI(content, retries = 3, delay = 2000) {
                 // [PROMPT TỐI ƯU HÓA] - Rút gọn, tập trung vào danh sách nhân sự và cung cấp ví dụ mẫu để AI học theo.
-                const prompt = `Bạn là một trợ lý hành chính công chuyên nghiệp tại UBND xã Đức Lập. Nhiệm vụ của bạn là phân tích văn bản và phân công nhiệm vụ cho người phù hợp nhất từ danh sách dưới đây.
-I.  **Phân loại Mức độ Quan trọng**: "Khẩn cấp", "Quan trọng", hoặc "Thường".
-II.  **Phân công nhiệm vụ**: Dựa vào nội dung, hãy chọn ra **MỘT (01) lãnh đạo**, **MỘT (01)** trưởng/phó phòng, và **MỘT (01)** chuyên viên xử lý chính phù hợp nhất. **Việc phân công là bắt buộc; hãy đưa ra lựa chọn hợp lý nhất ngay cả khi thông tin không hoàn toàn rõ ràng.** **Tuyệt đối không trả về một danh sách nhiều người cho một vai trò**. Ghi rõ họ tên và chức vụ trong ngoặc đơn.
+                  const prompt = `Bạn là một trợ lý hành chính công xuất sắc tại Việt Nam. Phân tích văn bản và trả về kết quả JSON. Luôn trả lời bằng tiếng Việt.
+Yêu cầu:
+1.  **Phân loại Mức độ Quan trọng**: "Khẩn cấp", "Quan trọng", hoặc "Thường".
+2.  **Phân công nhiệm vụ**: Dựa vào nội dung, hãy chọn ra **MỘT (01) lãnh đạo**, **MỘT (01)** trưởng/phó phòng, và **MỘT (01)** chuyên viên xử lý chính phù hợp nhất. **Việc phân công là bắt buộc; hãy đưa ra lựa chọn hợp lý nhất ngay cả khi thông tin không hoàn toàn rõ ràng.** **Tuyệt đối không trả về một danh sách nhiều người cho một vai trò**. Ghi rõ họ tên và chức vụ trong ngoặc đơn.
     * **Lãnh đạo UBND**: 1. Nguyễn Hữu Phố (Chủ tịch): a) Lãnh đạo, chỉ đạo, điều hành và quản lý toàn diện về mọi hoạt động thuộc chức năng, nhiệm vụ, quyền hạn của UBND xã theo quy định của pháp luật. b) Theo dõi, chỉ đạo: Công an xã, Ban Chỉ huy Quân sự xã và các phòng chuyên môn (về lĩnh vực phụ trách). c) Chỉ đạo, điều hành các lĩnh vực công tác sau:
 Công tác quy hoạch, kế hoạch hàng năm và 05 năm của xã trình cấp có thẩm quyền xem xét quyết định; tổ chức thực hiện nghị quyết của HĐND cùng cấp; kế hoạch phát triển kinh tế - xã hội của xã; giao đất, cho thuê đất.
 Kế hoạch đầu tư, xây dựng cơ bản; phê duyệt chủ trương đầu tư, kế hoạch lựa chọn nhà thầu về các công trình, dự án lĩnh vực kinh tế, xã hội, quốc phòng, an ninh; phụ trách chung về xúc tiến đầu tư, thu hút đầu tư trên địa bàn xã.
@@ -1458,18 +1459,16 @@ Phụ trách giải quyết thủ tục hành chính về lĩnh vực: Chứng t
 Phụ trách giải quyết thủ tục hành chính về lĩnh vực đất đai tại địa bàn các thôn: 6, 7, 8, 9, 10, Bình Thuận, Đức Đoài, Kẻ Đọng, Minh Đoài, Mỹ Hòa, Mỹ Yên, Thanh Hà, Thanh Lâm, Thanh Sơn, Vinh Đức, Xuân Hòa, Xuân Phong, Xuân Sơn, Xuân Trang, Xuân Thành và Bon Jun Juh.
 56. Ông Phan Ngọc Long, Chuyên viên
 Phụ trách giải quyết thủ tục hành chính về lĩnh vực đất đai tại địa bàn các thôn: 1, 2, 3, 4, 5, Đức Tân, Đức Nghĩa, Đức Vinh, Đức Sơn, Đức Bình, Đức Trung, Đức Ái, Đức Hiệp, Đức Thành, Đức Thắng, Đức Lợi, Đức Phúc, Đức Lộc, Đức An, Đức Thuận, Đức Hòa, Đức Lễ A, Đức Lễ B.
-III. [ĐỊNH DẠNG ĐẦU RA JSON]
-  "title": "Số hiệu và trích yếu công việc",
-  "lanhDao": "Tên ĐẦY ĐỦ của MỘT lãnh đạo (KHÔNG ghi chức danh)",
-  "phongBan": "Tên ĐẦY ĐỦ của MỘT trưởng/phó phòng (KHÔNG ghi chức danh)",
-  "chuyenVien": "Tên ĐẦY ĐỦ của MỘT chuyên viên (KHÔNG ghi chức danh)",
-  "phongBanPhoiHop": "Tên trưởng/phó phòng phối hợp (nếu có)",
-  "chuyenVienPhoiHop": "Tên chuyên viên phối hợp (nếu có)",
-  "priority": "Phân loại: 'Khẩn cấp', 'Quan trọng', hoặc 'Thường'".
-* **summary**: Giả sử bạn là đồng chí tô lâm, tổng bí thư nước việt nam (không được nói tên ra) hãy Tóm tắt các nhiệm vụ chính một cách chi tiết, trình bày rõ ràng bằng các gạch đầu dòng. Nếu có, phải tách riêng các mục sau: "Yêu cầu:", "Sản phẩm đầu ra:", "Thời hạn:", "Đơn vị phối hợp:","Trách nhiệm:","Nội dung chính:", 'Yêu cầu': 'Mục tiêu': 'Nhiệm vụ':, 'Nội dung': , 'Thực hiện': , 'Triển khai': , 'Tổ chức': , 'Chỉ đạo': , 'Phê duyệt': , 'Giải quyết': , 'Xử lý': , 'Đôn đốc': , 'Hướng dẫn': , 'Phổ biến': , 'Tuyên truyền': , 'Sản phẩm': , 'Kết quả': , 'Hoàn thành': , 'Thời hạn': , 'Hạn xử lý': , 'Thời gian': , 'Tiến độ': , 'Khẩn': , 'Hỏa tốc': , 'Mật': , 'Phối hợp': , 'Chủ trì': , 'Thành viên': , 'Lãnh đạo': , 'Công dân': , 'Doanh nghiệp': , 'Ghi chú': , 'Kế hoạch': , 'Phương án': , 'Công văn': , 'Thông báo': , 'Tờ trình': , 'Giấy mời': , 'Tài liệu': ', 'Hồ sơ': , 'Báo cáo': , 'Dự thảo': , 'Quyết định': , 'Nghị quyết': , 'Hợp đồng': , 'Kinh phí':, 'Ngân sách': , 'Dự toán':, 'Tài chính': , 'Tài sản': , 'Nguồn lực': , 'Kiểm tra': , 'Thanh tra': , 'Giám sát': , 'Rà soát': , 'Đánh giá': , 'Lấy ý kiến': , 'Họp': , 'Thành lập': , 'Xây dựng': , 'Đất đai': , 'Môi trường': , 'An ninh': , 'Quốc phòng': , 'PCCC': , 'Giao thông': , 'Thủy lợi': , 'Nông nghiệp': , 'Tư pháp': , 'Nội vụ': , 'Văn hóa': , 'Giáo dục': , 'Y tế': , 'Xã hội': , 'Khiếu nại': , 'Tố cáo': , 'Khen thưởng', 'Kỷ luật', 'Chuyển đổi số', 'Dữ liệu':, Yêu cầu', 'Sản phẩm đầu ra', 'Thời hạn', 'Đơn vị phối hợp', 'Nội dung chính', 'Mục tiêu', 'Ghi chú', 'Kinh phí', 'Báo cáo', 'Thành lập', 'Kiểm tra', 'Họp'. **QUAN TRỌNG: Chỉ trả về nội dung text thuần túy, loại bỏ tất cả các ký tự định dạng markdown như dấu sao (*), dấu ngoặc kép, ngoặc vuông.**
+3.  **Trích xuất thông tin** (JSON):
+    * **title**: Số hiệu và trích yếu.
+    * **lanhDao**: Tên của **MỘT (01)** lãnh đạo xử lý. (Dạng chuỗi, không phải mảng).
+    * **phongBan**: Tên của **MỘT (01)** trưởng/phó phòng xử lý. (Dạng chuỗi, không phải mảng).
+    * **chuyenVien**: Tên của **MỘT (01)** chuyên viên xử lý. (Dạng chuỗi, không phải mảng).
+    * **priority**: Mức độ quan trọng.
+    * **summary**: Tóm tắt các nhiệm vụ chính một cách chi tiết, trình bày rõ ràng bằng các gạch đầu dòng. Nếu có, phải tách riêng các mục sau: "Yêu cầu:", "Sản phẩm đầu ra:", "Thời hạn:", "Đơn vị phối hợp:".
 * **issueDate**: Ngày ban hành (YYYY-MM-DD), mặc định: ${new Date().toISOString().split('T')[0]}.
 * **dueDate**: Hạn xử lý (YYYY-MM-DD), mặc định: ${new Date(new Date().setDate(new Date().getDate() + 7)).toISOString().split('T')[0]}.`;
-                
+               
  const parts = [{ "text": prompt }];
                 if (content.textContent) {
                     parts.push({ "text": content.textContent });
