@@ -283,773 +283,737 @@
         </div>
     </div>
 <script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
-  // BỔ SUNG: Import các hàm cần thiết của Firestore
-  import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+    // =============================================================
+    // KHỞI TẠO FIREBASE VÀ CÁC DỊCH VỤ
+    // =============================================================
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+    import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
-  // Your web app's Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyBA98rptMynXX3yVaT9Q9_O8aCcuay8xKY",
-    authDomain: "quan-ly-cong-viec-dl.firebaseapp.com",
-    projectId: "quan-ly-cong-viec-dl",
-    storageBucket: "quan-ly-cong-viec-dl.firebasestorage.app",
-    messagingSenderId: "415835641693",
-    appId: "1:415835641693:web:fabad6ce3f60c0ff6a3ab4"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  // BỔ SUNG: Khởi tạo dịch vụ Firestore và export để script chính có thể sử dụng
-window.firebase = {
-  db: getFirestore(app),
-  collection,
-  getDocs,
-  doc,
-  setDoc,
-  deleteDoc
-};
-</script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-const { db, collection, getDocs, doc, setDoc, deleteDoc } = window.firebase; // Import đối tượng 'db' từ script module ở trên
-            // =============================================================
-            // KHAI BÁO BIẾN VÀ DOM ELEMENTS
-            // =============================================================
-            const loginScreen = document.getElementById('login-screen');
-            const appScreen = document.getElementById('app-screen');
-            const loginForm = document.getElementById('login-form');
-            const loginError = document.getElementById('login-error');
-            const logoutBtn = document.getElementById('logout-btn');
-            
-            const kpiTotalCard = document.getElementById('card-total');
-            const kpiCompletedCard = document.getElementById('card-completed');
-            const kpiPendingCard = document.getElementById('card-pending');
-            const kpiOverdueCard = document.getElementById('card-overdue');
-
-            const addDocAIBtn = document.getElementById('add-doc-ai-btn');
-            const addDocManualBtn = document.getElementById('add-doc-manual-btn');
-            const fileUploadInput = document.getElementById('file-upload-input');
-            const loaderOverlay = document.getElementById('loader-overlay');
-            
-            const modal = document.getElementById('doc-modal');
-            const modalContent = document.getElementById('modal-content');
-            const closeModalBtn = document.getElementById('close-modal-btn');
-            const cancelBtn = document.getElementById('cancel-btn');
-            const docForm = document.getElementById('doc-form');
-            const modalTitle = document.getElementById('modal-title');
-            
-            const notesModal = document.getElementById('notes-modal');
-            const notesModalContent = document.getElementById('notes-modal-content');
-            const closeNotesModalBtn = document.getElementById('close-notes-modal-btn');
-            const cancelNotesBtn = document.getElementById('cancel-notes-btn');
-            const notesForm = document.getElementById('notes-form');
-            const notesDocIdInput = document.getElementById('notes-doc-id');
-            const editDocNotesInput = document.getElementById('edit-doc-notes');
-
-            const exportModal = document.getElementById('export-modal');
-            const exportModalContent = document.getElementById('export-modal-content');
-            const closeExportModalBtn = document.getElementById('close-export-modal-btn');
-            const cancelExportBtn = document.getElementById('cancel-export-btn');
-
-            const documentList = document.getElementById('document-list');
-            const emptyState = document.getElementById('empty-state');
-            
-            const searchInput = document.getElementById('search-input');
-            const statusFilter = document.getElementById('status-filter');
-            const phongbanFilter = document.getElementById('phongban-filter');
-            const chuyenvienFilter = document.getElementById('chuyenvien-filter');
-            const exportReportBtn = document.getElementById('export-report-btn');
-
-            const sortHeaders = {
-                priority: document.getElementById('sort-priority'),
-                dueDate: document.getElementById('sort-dueDate'),
-                status: document.getElementById('sort-status'),
-            };
-            
-            const docIdInput = document.getElementById('doc-id');
-            const docTitleInput = document.getElementById('doc-title');
-            const docSummaryInput = document.getElementById('doc-summary');
-            const docNotesInput = document.getElementById('doc-notes');
-            const docIssueDateInput = document.getElementById('doc-issue-date');
-            const docDueDateInput = document.getElementById('doc-due-date');
-            const docStatusInput = document.getElementById('doc-status');
-            const docRecurringInput = document.getElementById('doc-recurring');
-            const selectLanhDao = document.getElementById('select-lanh-dao');
-            const selectPhongBan = document.getElementById('select-phong-ban');
-            const selectChuyenVien = document.getElementById('select-chuyen-vien');
-            
-            // Khai báo biến cho chức năng phân tích văn bản
-            const addTextAIBtn = document.getElementById('add-text-ai-btn');
-            const textAnalysisModal = document.getElementById('text-analysis-modal');
-            const closeTextModalBtn = document.getElementById('close-text-modal-btn');
-            const cancelTextAnalysisBtn = document.getElementById('cancel-text-analysis-btn');
-            const submitTextAnalysisBtn = document.getElementById('submit-text-analysis-btn');
-            const textAnalysisInput = document.getElementById('text-analysis-input');
-
-            // Khai báo biến cho chức năng phối hợp
-            const selectPhongBanPhoiHop = document.getElementById('select-phong-ban-phoihop');
-            const selectChuyenVienPhoiHop = document.getElementById('select-chuyen-vien-phoihop');
-		
-            let documents = [];
-            let sortBy = 'dueDate'; 
-            let sortOrder = 'asc'; 
-            let currentUserRole = '';
-
-            // =============================================================
-            // DỮ LIỆU NHÂN SỰ (HARDCODED)
-            // =============================================================
-function findAndSelectPersonnel(selectElement, personnelName) {
-    if (!personnelName || typeof personnelName !== 'string' || !selectElement) return;
-
-    // Hàm chuẩn hóa tên: loại bỏ chức danh trong ngoặc, chuyển thành chữ thường, bỏ dấu tiếng Việt.
-    const normalize = (str) => {
-        return str.split('(')[0].trim().toLowerCase()
-            .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const firebaseConfig = {
+        apiKey: "AIzaSyBA98rptMynXX3yVaT9Q9_O8aCcuay8xKY",
+        authDomain: "quan-ly-cong-viec-dl.firebaseapp.com",
+        projectId: "quan-ly-cong-viec-dl",
+        storageBucket: "quan-ly-cong-viec-dl.firebasestorage.app",
+        messagingSenderId: "415835641693",
+        appId: "1:415835641693:web:fabad6ce3f60c0ff6a3ab4"
     };
 
-    const normalizedPersonnelName = normalize(personnelName);
-    if (!normalizedPersonnelName) return;
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-    const options = Array.from(selectElement.options);
+    // =============================================================
+    // KHAI BÁO BIẾN VÀ DOM ELEMENTS
+    // =============================================================
+    const loginScreen = document.getElementById('login-screen');
+    const appScreen = document.getElementById('app-screen');
+    const loginForm = document.getElementById('login-form');
+    const loginError = document.getElementById('login-error');
+    const logoutBtn = document.getElementById('logout-btn');
+    
+    const kpiTotalCard = document.getElementById('card-total');
+    const kpiCompletedCard = document.getElementById('card-completed');
+    const kpiPendingCard = document.getElementById('card-pending');
+    const kpiOverdueCard = document.getElementById('card-overdue');
 
-    // 1. Ưu tiên tìm kiếm kết quả khớp hoàn toàn sau khi đã chuẩn hóa
-    let bestMatch = options.find(option => normalize(option.value) === normalizedPersonnelName);
+    const addDocAIBtn = document.getElementById('add-doc-ai-btn');
+    const addDocManualBtn = document.getElementById('add-doc-manual-btn');
+    const fileUploadInput = document.getElementById('file-upload-input');
+    const loaderOverlay = document.getElementById('loader-overlay');
+    
+    const modal = document.getElementById('doc-modal');
+    const modalContent = document.getElementById('modal-content');
+    const closeModalBtn = document.getElementById('close-modal-btn');
+    const cancelBtn = document.getElementById('cancel-btn');
+    const docForm = document.getElementById('doc-form');
+    const modalTitle = document.getElementById('modal-title');
+    
+    const notesModal = document.getElementById('notes-modal');
+    const notesModalContent = document.getElementById('notes-modal-content');
+    const closeNotesModalBtn = document.getElementById('close-notes-modal-btn');
+    const cancelNotesBtn = document.getElementById('cancel-notes-btn');
+    const notesForm = document.getElementById('notes-form');
+    const notesDocIdInput = document.getElementById('notes-doc-id');
+    const editDocNotesInput = document.getElementById('edit-doc-notes');
 
-    // 2. Nếu không khớp hoàn toàn, thử tìm kiếm xem tên trong tùy chọn có chứa tên do AI trả về không
-    if (!bestMatch) {
-         bestMatch = options.find(option => normalize(option.value).includes(normalizedPersonnelName));
+    const exportModal = document.getElementById('export-modal');
+    const exportModalContent = document.getElementById('export-modal-content');
+    const closeExportModalBtn = document.getElementById('close-export-modal-btn');
+    const cancelExportBtn = document.getElementById('cancel-export-btn');
+
+    const documentList = document.getElementById('document-list');
+    const emptyState = document.getElementById('empty-state');
+    
+    const searchInput = document.getElementById('search-input');
+    const statusFilter = document.getElementById('status-filter');
+    const phongbanFilter = document.getElementById('phongban-filter');
+    const chuyenvienFilter = document.getElementById('chuyenvien-filter');
+    const exportReportBtn = document.getElementById('export-report-btn');
+
+    const sortHeaders = {
+        priority: document.getElementById('sort-priority'),
+        dueDate: document.getElementById('sort-dueDate'),
+        status: document.getElementById('sort-status'),
+    };
+    
+    const docIdInput = document.getElementById('doc-id');
+    const docTitleInput = document.getElementById('doc-title');
+    const docSummaryInput = document.getElementById('doc-summary');
+    const docNotesInput = document.getElementById('doc-notes');
+    const docIssueDateInput = document.getElementById('doc-issue-date');
+    const docDueDateInput = document.getElementById('doc-due-date');
+    const docStatusInput = document.getElementById('doc-status');
+    const docRecurringInput = document.getElementById('doc-recurring');
+    const selectLanhDao = document.getElementById('select-lanh-dao');
+    const selectPhongBan = document.getElementById('select-phong-ban');
+    const selectChuyenVien = document.getElementById('select-chuyen-vien');
+    
+    const addTextAIBtn = document.getElementById('add-text-ai-btn');
+    const textAnalysisModal = document.getElementById('text-analysis-modal');
+    const closeTextModalBtn = document.getElementById('close-text-modal-btn');
+    const cancelTextAnalysisBtn = document.getElementById('cancel-text-analysis-btn');
+    const submitTextAnalysisBtn = document.getElementById('submit-text-analysis-btn');
+    const textAnalysisInput = document.getElementById('text-analysis-input');
+
+    const selectPhongBanPhoiHop = document.getElementById('select-phong-ban-phoihop');
+    const selectChuyenVienPhoiHop = document.getElementById('select-chuyen-vien-phoihop');
+
+    let documents = [];
+    let sortBy = 'dueDate'; 
+    let sortOrder = 'asc'; 
+    let currentUserRole = '';
+
+    // =============================================================
+    // DỮ LIỆU NHÂN SỰ (HARDCODED)
+    // =============================================================
+    function findAndSelectPersonnel(selectElement, personnelName) {
+        if (!personnelName || typeof personnelName !== 'string' || !selectElement) return;
+
+        const normalize = (str) => {
+            return str.split('(')[0].trim().toLowerCase()
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        };
+
+        const normalizedPersonnelName = normalize(personnelName);
+        if (!normalizedPersonnelName) return;
+
+        const options = Array.from(selectElement.options);
+        let bestMatch = options.find(option => normalize(option.value) === normalizedPersonnelName);
+        if (!bestMatch) {
+            bestMatch = options.find(option => normalize(option.value).includes(normalizedPersonnelName));
+        }
+        if (!bestMatch) {
+            bestMatch = options.find(option => normalizedPersonnelName.includes(normalize(option.value)));
+        }
+
+        if (bestMatch) {
+            selectElement.value = bestMatch.value;
+            selectElement.dispatchEvent(new Event('change', { 'bubbles': true }));
+        }
+    }          
+    const allPersonnel = [
+        { name: 'Nguyễn Hữu Phố (Chủ tịch)', rank: 1, department: 'UBND' },
+        { name: 'Nguyễn Văn Tuấn (P. Chủ tịch)', rank: 2, department: 'UBND' },
+        { name: 'Đinh Thanh Hải (P. Chủ tịch)', rank: 2, department: 'UBND' },
+        { name: 'Văn Minh Diệu (Trưởng phòng KT)', rank: 3, department: 'KT' },
+        { name: 'Phạm Thị Hồng (Phó Trưởng phòng KT)', rank: 4, department: 'KT' },
+        { name: 'Phạm Khắc Chung (Trưởng phòng VHXH)', rank: 3, department: 'VHXH' },
+        { name: 'Nguyễn Thị Phương (Phó Trưởng phòng VHXH)', rank: 4, department: 'VHXH' },
+        { name: 'Trần Văn Giới (Chánh VP)', rank: 3, department: 'VP' },
+        { name: 'Điểu Lê Nam Nam (Phó Chánh VP)', rank: 4, department: 'VP' },
+        { name: 'Trần Văn Long (Chuyên viên KT)', rank: 5, department: 'KT' },
+        { name: 'Võ Thị Hà Phương (Chuyên viên KT)', rank: 5, department: 'KT' },
+        { name: 'Trần Thị Quỳnh Trang (Chuyên viên KT)', rank: 5, department: 'KT' },
+        { name: 'Nguyễn Thị Lài (Chuyên viên KT)', rank: 5, department: 'KT' },
+        { name: 'Ngô Hoàng Hiệp (Chuyên viên KT)', rank: 5, department: 'KT' },
+        { name: 'Võ Sỹ Ngọc Hoàng (Chuyên viên KT)', rank: 5, department: 'KT' },
+        { name: 'Nguyễn Công Hiếu (Chuyên viên KT)', rank: 5, department: 'KT' },
+        { name: 'Phan Thị Việt Trinh (Chuyên viên KT)', rank: 5, department: 'KT' },
+        { name: 'Nguyễn Sỹ Hải (Chuyên viên KT)', rank: 5, department: 'KT' },
+        { name: 'Doãn Hữu Cường (Chuyên viên KT)', rank: 5, department: 'KT' },
+        { name: 'Nguyễn Sỹ Anh (Chuyên viên KT)', rank: 5, department: 'KT' },
+        { name: 'Đỗ Thị Dung (Chuyên viên KT)', rank: 5, department: 'KT' },
+        { name: 'Đặng Hồng Khanh (Chuyên viên KT)', rank: 5, department: 'KT' },
+        { name: 'Trần Thị Thu Hiền (Chuyên viên KT)', rank: 5, department: 'KT' },
+        { name: 'Trần Quốc Hoàn (Chuyên viên VHXH)', rank: 5, department: 'VHXH' },
+        { name: 'Huỳnh Quốc Toàn (Chuyên viên VHXH)', rank: 5, department: 'VHXH' },
+        { name: 'Hoàng Thị Thu Bắc (Chuyên viên VHXH)', rank: 5, department: 'VHXH' },
+        { name: 'Trần Thị Hồng Hạnh (Chuyên viên VHXH)', rank: 5, department: 'VHXH' },
+        { name: 'Sào Thị Lưu (Chuyên viên VHXH)', rank: 5, department: 'VHXH' },
+        { name: 'Đặng Thị Tin (Chuyên viên VHXH)', rank: 5, department: 'VHXH' },
+        { name: 'Trần Văn Trọng (Chuyên viên VHXH)', rank: 5, department: 'VHXH' },
+        { name: 'Nguyễn Thị Vân (Chuyên viên VHXH)', rank: 5, department: 'VHXH' },
+        { name: 'Ngô Thị Thuý (Chuyên viên VHXH)', rank: 5, department: 'VHXH' },
+        { name: 'Phạm Nữ Mỹ Duyên (Chuyên viên VHXH)', rank: 5, department: 'VHXH' },
+        { name: 'Nguyễn Thị Kim Oanh (Chuyên viên VHXH)', rank: 5, department: 'VHXH' },
+        { name: 'Đào Thị Trường Giang (Chuyên viên VHXH)', rank: 5, department: 'VHXH' },
+        { name: 'Lữ Minh Quân (Kế toán VP)', rank: 5, department: 'VP' },
+        { name: 'Nguyễn Thị Thu Thảo (Chuyên viên VP)', rank: 5, department: 'VP' },
+        { name: 'Võ Ngọc Huy (Chuyên viên VP)', rank: 5, department: 'VP' },
+        { name: 'Trần Anh Quyết (Chuyên viên VP)', rank: 5, department: 'VP' },
+        { name: 'Nguyễn Minh Hạ (Chuyên viên VP)', rank: 5, department: 'VP' },
+        { name: 'Phan Văn Phúc (Chuyên viên VP)', rank: 5, department: 'VP' },
+        { name: 'Hoàng Thị Trà (Chuyên viên VP)', rank: 5, department: 'VP' },
+        { name: 'Phương Dương Giang (Chuyên viên VP)', rank: 5, department: 'VP' },
+        { name: 'Nguyễn Thị Bích Hạnh (Chuyên viên VP)', rank: 5, department: 'VP' },
+        { name: 'Đinh Văn Bình (Phó Giám đốc HCC)', rank: 4, department: 'HCC' },
+        { name: 'Đoàn Thị Hương Sen (Chuyên viên HCC)', rank: 5, department: 'HCC' },
+        { name: 'Võ Thị Bích Phương (Chuyên viên HCC)', rank: 5, department: 'HCC' },
+        { name: 'Bùi Lê Cao Trí (Chuyên viên HCC)', rank: 5, department: 'HCC' },
+        { name: 'Đậu Thị Thanh Thảo (Chuyên viên HCC)', rank: 5, department: 'HCC' },
+        { name: 'Nguyễn Thị Hương (Chuyên viên HCC)', rank: 5, department: 'HCC' },
+        { name: 'Nguyễn Đức Lập (Chuyên viên HCC)', rank: 5, department: 'HCC' },
+        { name: 'Tô Thị Thúy Phượng (Chuyên viên HCC)', rank: 5, department: 'HCC' },
+        { name: 'Lê Văn Giang (Chuyên viên HCC)', rank: 5, department: 'HCC' },
+        { name: 'Võ Thị Ái Phi (Chuyên viên HCC)', rank: 5, department: 'HCC' },
+        { name: 'Phan Ngọc Long (Chuyên viên HCC)', rank: 5, department: 'HCC' },
+    ];
+
+    // =============================================================
+    // QUẢN LÝ XÁC THỰC VÀ PHÂN QUYỀN
+    // =============================================================
+    
+    function handleLogin(e) {
+        e.preventDefault();
+        const username = e.target.username.value;
+        const password = e.target.password.value;
+
+        if (username === 'admin' && password === 'admin123') {
+            sessionStorage.setItem('userRole', 'admin');
+            startApplication();
+        } else if (username === 'user' && password === 'user123') {
+            sessionStorage.setItem('userRole', 'viewer');
+            startApplication();
+        } else {
+            loginError.classList.remove('hidden');
+        }
+    }
+
+    function handleLogout() {
+        sessionStorage.removeItem('userRole');
+        location.reload();
+    }
+
+    const preventDefaultAction = event => event.preventDefault();
+    function blockShortcuts(e) {
+        if (e.ctrlKey && ['s', 'u', 'c', 'p', 'x', 'a', 'i', 'j'].includes(e.key.toLowerCase())) e.preventDefault();
+        if (e.key === 'F12') e.preventDefault();
+    }
+
+    function applyPermissions() {
+        const adminControls = document.getElementById('admin-controls');
+        const actionsHeader = document.getElementById('actions-header');
+
+        document.removeEventListener('contextmenu', preventDefaultAction);
+        document.removeEventListener('keydown', blockShortcuts);
+        document.body.removeEventListener('copy', preventDefaultAction);
+        document.body.removeEventListener('cut', preventDefaultAction);
+        appScreen.classList.remove('protected-content');
+        
+        if (currentUserRole === 'viewer') {
+            adminControls.classList.add('hidden');
+            actionsHeader.classList.add('hidden');
+            appScreen.classList.add('protected-content');
+            document.addEventListener('contextmenu', preventDefaultAction);
+            document.addEventListener('keydown', blockShortcuts);
+            document.body.addEventListener('copy', preventDefaultAction);
+            document.body.addEventListener('cut', preventDefaultAction);
+        } else {
+            adminControls.classList.remove('hidden');
+            actionsHeader.classList.remove('hidden');
+        }
+        renderAll();
+    }
+   
+    function formatSummary(summaryText, doc) {
+        if (typeof summaryText === 'string') {
+            summaryText = summaryText
+                .replace(/`+/g, '')
+                .replace(/['"\[\]{}]/g, '')
+                .replace(/^\s*[:*\-]\s*/gm, '')
+                .replace(/\\n/g, '\n')
+                .trim();
+        }
+
+        let html = '';
+        if (summaryText && summaryText.trim() !== '') {
+            const iconMap = { 'Yêu cầu': '🎯', 'Mục tiêu': '🎯', 'Nhiệm vụ': '📌', 'Nội dung': '📋', 'Thực hiện': '▶️', 'Triển khai': '🚀', 'Tổ chức': '📅', 'Chỉ đạo': '👉', 'Phê duyệt': '✅', 'Giải quyết': '💡', 'Xử lý': '⚙️', 'Đôn đốc': '🏃‍♂️', 'Hướng dẫn': 'ℹ️', 'Phổ biến': '📡', 'Tuyên truyền': '📰', 'Sản phẩm': '📦', 'Kết quả': '🏆', 'Hoàn thành': '🏁', 'Thời hạn': '⏳', 'Hạn xử lý': '⏳', 'Thời gian': '⏰', 'Tiến độ': '📈', 'Khẩn': '🚨', 'Hỏa tốc': '🔥', 'Mật': '🤫', 'Phối hợp': '🤝', 'Chủ trì': '👤', 'Thành viên': '👥', 'Lãnh đạo': '⭐', 'Công dân': '👨‍👩‍👧‍👦', 'Doanh nghiệp': '💼', 'Ghi chú': '📝', 'Kế hoạch': '🗺️', 'Phương án': '🧭', 'Công văn': '✉️', 'Thông báo': '📢', 'Tờ trình': '📤', 'Giấy mời': '💌', 'Tài liệu': '📄', 'Hồ sơ': '📁', 'Báo cáo': '📊', 'Dự thảo': '✍️', 'Quyết định': '⚖️', 'Nghị quyết': '📜', 'Hợp đồng': '📑', 'Kinh phí': '💰', 'Ngân sách': '💵', 'Dự toán': '🧾', 'Tài chính': '🪙', 'Tài sản': '🏦', 'Nguồn lực': '💪', 'Kiểm tra': '🔍', 'Thanh tra': '🔍', 'Giám sát': '👀', 'Rà soát': '🧐', 'Đánh giá': '💯', 'Lấy ý kiến': '🗣️', 'Họp': '👥', 'Thành lập': '🏛️', 'Xây dựng': '🏗️', 'Đất đai': '🏞️', 'Môi trường': '🌿', 'An ninh': '🛡️', 'Quốc phòng': '⚔️', 'PCCC': '🚒', 'Giao thông': '🛣️', 'Thủy lợi': '💧', 'Nông nghiệp': '🌾', 'Tư pháp': '⚖️', 'Nội vụ': '🗄️', 'Văn hóa': '🎭', 'Giáo dục': '🎓', 'Y tế': '⚕️', 'Xã hội': '❤️', 'Khiếu nại': '😠', 'Tố cáo': '🗣️', 'Khen thưởng': '🎖️', 'Kỷ luật': '📜', 'Chuyển đổi số': '🌐', 'Dữ liệu': '💾' };
+            const keywords = ['Yêu cầu', 'Sản phẩm đầu ra', 'Thời hạn', 'Đơn vị phối hợp', 'Nội dung chính', 'Mục tiêu', 'Ghi chú', 'Kinh phí', 'Báo cáo', 'Thành lập', 'Kiểm tra', 'Họp'];
+            const regex = new RegExp(`^(${keywords.join('|')}):`, 'gim');
+            const processedText = summaryText.replace(regex, '|||$1:');
+            const parts = processedText.split('|||').filter(p => p.trim() !== '');
+
+            if (parts.length <= 1) {
+                 html = `<p class="text-gray-700 whitespace-pre-wrap">${summaryText}</p>`;
+            } else {
+                parts.forEach(part => {
+                    const partSplit = part.split(/:(.*)/s);
+                    const header = partSplit[0].trim();
+                    const content = partSplit[1] ? partSplit[1].trim() : '';
+                    if (!content) return;
+                    let selectedIcon = '🔹';
+                    for (const key in iconMap) {
+                        if (header.toLowerCase().includes(key.toLowerCase())) {
+                            selectedIcon = iconMap[key];
+                            break;
+                        }
+                    }
+                    html += `<div class="flex items-start mt-3"><div class="text-base mr-2 pt-1">${selectedIcon}</div><div class="flex-1"><h4 class="text-sm font-semibold text-gray-900">${header}:</h4><p class="text-sm text-gray-700 whitespace-pre-wrap">${content}</p></div></div>`;
+                });
+            }
+        } else {
+            html = '<p class="text-gray-600 text-sm">Không có tóm tắt.</p>';
+        }
+        
+        if (doc.phongBanPhoiHop) {
+            html += `
+                <div class="flex items-start mt-4 pt-3 border-t border-dashed">
+                    <div class="text-base mr-2 pt-1">🤝</div>
+                    <div class="flex-1">
+                        <h4 class="text-sm font-semibold text-gray-900">Đơn vị phối hợp:</h4>
+                        <p class="text-sm text-gray-700">${doc.phongBanPhoiHop}</p>
+                        ${doc.chuyenVienPhoiHop ? `<p class="text-sm text-gray-700 mt-1"><strong>Chuyên viên:</strong> ${doc.chuyenVienPhoiHop}</p>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+        return html;
+    }
+    // =============================================================
+    // CÁC HÀM LOGIC CỦA ỨNG DỤNG
+    // =============================================================
+
+    async function loadDocuments() {
+        try {
+            const querySnapshot = await getDocs(collection(db, "documents"));
+            documents = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        } catch (error) {
+            console.error("Lỗi khi tải dữ liệu từ Firebase: ", error);
+            alert("Không thể kết nối đến cơ sở dữ liệu. Vui lòng kiểm tra lại kết nối mạng.");
+            documents = []; // Reset về mảng rỗng nếu lỗi
+        }
     }
     
-    // 3. Nếu vẫn không khớp, thử tìm ngược lại xem tên AI trả về có chứa tên trong tùy chọn không
-     if (!bestMatch) {
-         bestMatch = options.find(option => normalizedPersonnelName.includes(normalize(option.value)));
+    function getWeekInfo(d) {
+        const date = new Date(d);
+        date.setHours(0, 0, 0, 0);
+        const day = date.getDay();
+        const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+        const startOfWeek = new Date(date.setDate(diff));
+        const endOfWeek = new Date(new Date(startOfWeek).setDate(startOfWeek.getDate() + 6));
+        const onejan = new Date(startOfWeek.getFullYear(), 0, 1);
+        const weekNumber = Math.ceil((((startOfWeek - onejan) / 86400000) + onejan.getDay() + 1) / 7);
+        return { weekNumber, year: startOfWeek.getFullYear(), start: startOfWeek, end: endOfWeek, key: `${startOfWeek.getFullYear()}-${weekNumber}` };
     }
 
-    if (bestMatch) {
-        selectElement.value = bestMatch.value;
-        // Kích hoạt sự kiện 'change' để cập nhật các ô lựa chọn phụ thuộc (ví dụ: chuyên viên theo phòng ban)
-        selectElement.dispatchEvent(new Event('change', { 'bubbles': true }));
+    function calculateDaysRemaining(dueDateString) {
+        const today = new Date();
+        const dueDate = new Date(dueDateString);
+        today.setHours(0, 0, 0, 0);
+        dueDate.setHours(0, 0, 0, 0);
+        return Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
     }
-}          
-const allPersonnel = [
-    { name: 'Nguyễn Hữu Phố (Chủ tịch)', rank: 1, department: 'UBND' },
-                { name: 'Nguyễn Văn Tuấn (P. Chủ tịch)', rank: 2, department: 'UBND' },
-                { name: 'Đinh Thanh Hải (P. Chủ tịch)', rank: 2, department: 'UBND' },
-                { name: 'Văn Minh Diệu (Trưởng phòng KT)', rank: 3, department: 'KT' },
-                { name: 'Phạm Thị Hồng (Phó Trưởng phòng KT)', rank: 4, department: 'KT' },
-                { name: 'Phạm Khắc Chung (Trưởng phòng VHXH)', rank: 3, department: 'VHXH' },
-                { name: 'Nguyễn Thị Phương (Phó Trưởng phòng VHXH)', rank: 4, department: 'VHXH' },
-                { name: 'Trần Văn Giới (Chánh VP)', rank: 3, department: 'VP' },
-                { name: 'Điểu Lê Nam Nam (Phó Chánh VP)', rank: 4, department: 'VP' },
-                { name: 'Trần Văn Long (Chuyên viên KT)', rank: 5, department: 'KT' },
-                { name: 'Võ Thị Hà Phương (Chuyên viên KT)', rank: 5, department: 'KT' },
-                { name: 'Trần Thị Quỳnh Trang (Chuyên viên KT)', rank: 5, department: 'KT' },
-                { name: 'Nguyễn Thị Lài (Chuyên viên KT)', rank: 5, department: 'KT' },
-                { name: 'Ngô Hoàng Hiệp (Chuyên viên KT)', rank: 5, department: 'KT' },
-                { name: 'Võ Sỹ Ngọc Hoàng (Chuyên viên KT)', rank: 5, department: 'KT' },
-                { name: 'Nguyễn Công Hiếu (Chuyên viên KT)', rank: 5, department: 'KT' },
-                { name: 'Phan Thị Việt Trinh (Chuyên viên KT)', rank: 5, department: 'KT' },
-                { name: 'Nguyễn Sỹ Hải (Chuyên viên KT)', rank: 5, department: 'KT' },
-                { name: 'Doãn Hữu Cường (Chuyên viên KT)', rank: 5, department: 'KT' },
-                { name: 'Nguyễn Sỹ Anh (Chuyên viên KT)', rank: 5, department: 'KT' },
-                { name: 'Đỗ Thị Dung (Chuyên viên KT)', rank: 5, department: 'KT' },
-                { name: 'Đặng Hồng Khanh (Chuyên viên KT)', rank: 5, department: 'KT' },
-                { name: 'Trần Thị Thu Hiền (Chuyên viên KT)', rank: 5, department: 'KT' },
-                { name: 'Trần Quốc Hoàn (Chuyên viên VHXH)', rank: 5, department: 'VHXH' },
-                { name: 'Huỳnh Quốc Toàn (Chuyên viên VHXH)', rank: 5, department: 'VHXH' },
-                { name: 'Hoàng Thị Thu Bắc (Chuyên viên VHXH)', rank: 5, department: 'VHXH' },
-                { name: 'Trần Thị Hồng Hạnh (Chuyên viên VHXH)', rank: 5, department: 'VHXH' },
-                { name: 'Sào Thị Lưu (Chuyên viên VHXH)', rank: 5, department: 'VHXH' },
-                { name: 'Đặng Thị Tin (Chuyên viên VHXH)', rank: 5, department: 'VHXH' },
-                { name: 'Trần Văn Trọng (Chuyên viên VHXH)', rank: 5, department: 'VHXH' },
-                { name: 'Nguyễn Thị Vân (Chuyên viên VHXH)', rank: 5, department: 'VHXH' },
-                { name: 'Ngô Thị Thuý (Chuyên viên VHXH)', rank: 5, department: 'VHXH' },
-                { name: 'Phạm Nữ Mỹ Duyên (Chuyên viên VHXH)', rank: 5, department: 'VHXH' },
-                { name: 'Nguyễn Thị Kim Oanh (Chuyên viên VHXH)', rank: 5, department: 'VHXH' },
-                { name: 'Đào Thị Trường Giang (Chuyên viên VHXH)', rank: 5, department: 'VHXH' },
-                { name: 'Lữ Minh Quân (Kế toán VP)', rank: 5, department: 'VP' },
-                { name: 'Nguyễn Thị Thu Thảo (Chuyên viên VP)', rank: 5, department: 'VP' },
-                { name: 'Võ Ngọc Huy (Chuyên viên VP)', rank: 5, department: 'VP' },
-                { name: 'Trần Anh Quyết (Chuyên viên VP)', rank: 5, department: 'VP' },
-                { name: 'Nguyễn Minh Hạ (Chuyên viên VP)', rank: 5, department: 'VP' },
-                { name: 'Phan Văn Phúc (Chuyên viên VP)', rank: 5, department: 'VP' },
-                { name: 'Hoàng Thị Trà (Chuyên viên VP)', rank: 5, department: 'VP' },
-                { name: 'Phương Dương Giang (Chuyên viên VP)', rank: 5, department: 'VP' },
-                { name: 'Nguyễn Thị Bích Hạnh (Chuyên viên VP)', rank: 5, department: 'VP' },
-                
-                // ===== BẮT ĐẦU PHẦN BỔ SUNG MỚI TỪ THÔNG BÁO 02/TB-HCC =====
-                { name: 'Đinh Văn Bình (Phó Giám đốc HCC)', rank: 4, department: 'HCC' },
-                { name: 'Đoàn Thị Hương Sen (Chuyên viên HCC)', rank: 5, department: 'HCC' },
-                { name: 'Võ Thị Bích Phương (Chuyên viên HCC)', rank: 5, department: 'HCC' },
-                { name: 'Bùi Lê Cao Trí (Chuyên viên HCC)', rank: 5, department: 'HCC' },
-                { name: 'Đậu Thị Thanh Thảo (Chuyên viên HCC)', rank: 5, department: 'HCC' },
-                { name: 'Nguyễn Thị Hương (Chuyên viên HCC)', rank: 5, department: 'HCC' },
-                { name: 'Nguyễn Đức Lập (Chuyên viên HCC)', rank: 5, department: 'HCC' },
-                { name: 'Tô Thị Thúy Phượng (Chuyên viên HCC)', rank: 5, department: 'HCC' },
-                { name: 'Lê Văn Giang (Chuyên viên HCC)', rank: 5, department: 'HCC' },
-                { name: 'Võ Thị Ái Phi (Chuyên viên HCC)', rank: 5, department: 'HCC' },
-                { name: 'Phan Ngọc Long (Chuyên viên HCC)', rank: 5, department: 'HCC' },
-                // ===== KẾT THÚC PHẦN BỔ SUNG MỚI =====
-            ];
 
-            // =============================================================
-            // QUẢN LÝ XÁC THỰC VÀ PHÂN QUYỀN
-            // =============================================================
-            
-            function handleLogin(e) {
-                e.preventDefault();
-                const username = e.target.username.value;
-                const password = e.target.password.value;
+    function getStatusInfo(days, status) {
+        if (status === 'completed') return { text: 'Hoàn thành', color: 'bg-gray-400 text-gray-800' };
+        if (days < 0) return { text: `Trễ ${Math.abs(days)} ngày`, color: 'bg-red-600 text-white font-bold' };
+        if (days === 0) return { text: `Hạn hôm nay`, color: 'bg-red-500 text-white' };
+        if (days <= 3) return { text: `Còn ${days} ngày`, color: 'bg-yellow-500 text-white' };
+        return { text: `Còn ${days} ngày`, color: 'bg-green-500 text-white' };
+    }
 
-                if (username === 'admin' && password === 'admin123') {
-                    sessionStorage.setItem('userRole', 'admin');
-                    initializeApp();
-                } else if (username === 'user' && password === 'user123') {
-                    sessionStorage.setItem('userRole', 'viewer');
-                    initializeApp();
-                } else {
-                    loginError.classList.remove('hidden');
-                }
+    function getPriorityInfo(score) {
+        score = parseInt(score, 10) || 0;
+        if (score >= 90) return { text: `Hỏa tốc (${score})`, color: 'bg-red-700 text-white' };
+        if (score >= 75) return { text: `Khẩn cấp (${score})`, color: 'bg-red-500 text-white' };
+        if (score >= 50) return { text: `Quan trọng (${score})`, color: 'bg-yellow-500 text-white' };
+        if (score >= 25) return { text: `Thường (${score})`, color: 'bg-blue-500 text-white' };
+        return { text: `Thấp (${score})`, color: 'bg-gray-500 text-white' };
+    }
+
+    function updateSortButtons() {
+        const downArrow = `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>`;
+        const upArrow = `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd"></path></svg>`;
+        Object.keys(sortHeaders).forEach(key => {
+            const button = sortHeaders[key].querySelector('button');
+            button.innerHTML = key === sortBy ? (sortOrder === 'desc' ? downArrow : upArrow) : '';
+        });
+    }
+
+    function renderDashboard() {
+        const total = documents.length;
+        const completed = documents.filter(d => d.status === 'completed').length;
+        const pending = documents.filter(d => d.status === 'pending' && calculateDaysRemaining(d.dueDate) >= 0).length;
+        const overdue = documents.filter(d => d.status === 'pending' && calculateDaysRemaining(d.dueDate) < 0).length;
+        document.getElementById('kpi-total').textContent = total;
+        document.getElementById('kpi-completed').textContent = completed;
+        document.getElementById('kpi-pending').textContent = pending;
+        document.getElementById('kpi-overdue').textContent = overdue;
+    }
+
+    function renderAll() {
+        renderDashboard();
+        renderDocuments();
+    }
+    
+    function renderDocuments() {
+        documentList.innerHTML = '';
+        let filteredDocuments = documents.filter(doc => {
+            const searchTerm = searchInput.value.toLowerCase();
+            const status = statusFilter.value;
+            const phongBan = phongbanFilter.value;
+            const chuyenVien = chuyenvienFilter.value;
+            if (searchTerm && !(doc.title.toLowerCase().includes(searchTerm) || doc.summary.toLowerCase().includes(searchTerm) || (doc.notes && doc.notes.toLowerCase().includes(searchTerm)))) return false;
+            if (status !== 'all') {
+                 if (status === 'overdue') { if (doc.status !== 'pending' || calculateDaysRemaining(doc.dueDate) >= 0) return false; } 
+                 else if (status === 'pending') { if (doc.status !== 'pending' || calculateDaysRemaining(doc.dueDate) < 0) return false; }
+                 else if (doc.status !== status) return false;
             }
+            if (phongBan !== 'all' && doc.phongBan !== phongBan) return false;
+            if (chuyenVien !== 'all' && doc.chuyenVien !== chuyenVien) return false;
+            return true; // Return true for documents that pass the filter
+        });
+        emptyState.classList.toggle('hidden', filteredDocuments.length > 0);
+        const docsByWeek = {};
+        const currentWeekInfo = getWeekInfo(new Date());
+        filteredDocuments.forEach(doc => {
+            let weekInfo = (doc.status === 'pending' && new Date(doc.dueDate) < currentWeekInfo.start) ? currentWeekInfo : getWeekInfo(new Date(doc.dueDate));
+            if (!docsByWeek[weekInfo.key]) docsByWeek[weekInfo.key] = { info: weekInfo, docs: [] };
+            docsByWeek[weekInfo.key].docs.push(doc);
+        });
 
-            function handleLogout() {
-                sessionStorage.removeItem('userRole');
-                location.reload();
-            }
+        Object.keys(docsByWeek).sort((a, b) => b.localeCompare(a)).forEach(weekKey => {
+            const weekData = docsByWeek[weekKey];
+            const weekHeader = document.createElement('div');
+            weekHeader.className = 'week-header px-6 py-2 text-sm sticky top-0 z-0';
+            weekHeader.textContent = `TUẦN ${weekData.info.weekNumber} (${weekData.info.start.toLocaleDateString('vi-VN')} - ${weekData.info.end.toLocaleDateString('vi-VN')})`;
+            documentList.appendChild(weekHeader);
 
-            const preventDefaultAction = event => event.preventDefault();
-            function blockShortcuts(e) {
-                if (e.ctrlKey && ['s', 'u', 'c', 'p', 'x', 'a', 'i', 'j'].includes(e.key.toLowerCase())) e.preventDefault();
-                if (e.key === 'F12') e.preventDefault();
-            }
-
-            function applyPermissions() {
-                const adminControls = document.getElementById('admin-controls');
-                const actionsHeader = document.getElementById('actions-header');
-
-                document.removeEventListener('contextmenu', preventDefaultAction);
-                document.removeEventListener('keydown', blockShortcuts);
-                document.body.removeEventListener('copy', preventDefaultAction);
-                document.body.removeEventListener('cut', preventDefaultAction);
-                appScreen.classList.remove('protected-content');
-                
-                if (currentUserRole === 'viewer') {
-                    adminControls.classList.add('hidden');
-                    actionsHeader.classList.add('hidden');
-                    appScreen.classList.add('protected-content');
-                    document.addEventListener('contextmenu', preventDefaultAction);
-                    document.addEventListener('keydown', blockShortcuts);
-                    document.body.addEventListener('copy', preventDefaultAction);
-                    document.body.addEventListener('cut', preventDefaultAction);
-                } else {
-                    adminControls.classList.remove('hidden');
-                    actionsHeader.classList.remove('hidden');
-                }
-                renderAll();
-            }
-           
-function formatSummary(summaryText, doc) {
-                // [NÂNG CẤP] - Tự động dọn dẹp các ký tự thừa từ AI
-                if (typeof summaryText === 'string') {
-                    summaryText = summaryText
-                        .replace(/`+/g, '') // Xóa các dấu backtick
-                        .replace(/['"\[\]{}]/g, '') // Xóa các loại dấu ngoặc kép, ngoặc vuông, ngoặc nhọn
-                        .replace(/^\s*[:*\-]\s*/gm, '') // Xóa các dấu gạch đầu dòng, sao, hai chấm ở đầu dòng
-                        .replace(/\\n/g, '\n') // Chuyển ký tự xuống dòng \\n thành xuống dòng thật
-                        .trim();
-                }
-
-                let html = '';
-                if (summaryText && summaryText.trim() !== '') {
-                    const iconMap = { 'Yêu cầu': '🎯', 'Mục tiêu': '🎯', 'Nhiệm vụ': '📌', 'Nội dung': '📋', 'Thực hiện': '▶️', 'Triển khai': '🚀', 'Tổ chức': '📅', 'Chỉ đạo': '👉', 'Phê duyệt': '✅', 'Giải quyết': '💡', 'Xử lý': '⚙️', 'Đôn đốc': '🏃‍♂️', 'Hướng dẫn': 'ℹ️', 'Phổ biến': '📡', 'Tuyên truyền': '📰', 'Sản phẩm': '📦', 'Kết quả': '🏆', 'Hoàn thành': '🏁', 'Thời hạn': '⏳', 'Hạn xử lý': '⏳', 'Thời gian': '⏰', 'Tiến độ': '📈', 'Khẩn': '🚨', 'Hỏa tốc': '🔥', 'Mật': '🤫', 'Phối hợp': '🤝', 'Chủ trì': '👤', 'Thành viên': '👥', 'Lãnh đạo': '⭐', 'Công dân': '👨‍👩‍👧‍👦', 'Doanh nghiệp': '💼', 'Ghi chú': '📝', 'Kế hoạch': '🗺️', 'Phương án': '🧭', 'Công văn': '✉️', 'Thông báo': '📢', 'Tờ trình': '📤', 'Giấy mời': '💌', 'Tài liệu': '📄', 'Hồ sơ': '📁', 'Báo cáo': '📊', 'Dự thảo': '✍️', 'Quyết định': '⚖️', 'Nghị quyết': '📜', 'Hợp đồng': '📑', 'Kinh phí': '💰', 'Ngân sách': '💵', 'Dự toán': '🧾', 'Tài chính': '🪙', 'Tài sản': '🏦', 'Nguồn lực': '💪', 'Kiểm tra': '🔍', 'Thanh tra': '🔍', 'Giám sát': '👀', 'Rà soát': '🧐', 'Đánh giá': '💯', 'Lấy ý kiến': '🗣️', 'Họp': '👥', 'Thành lập': '🏛️', 'Xây dựng': '🏗️', 'Đất đai': '🏞️', 'Môi trường': '🌿', 'An ninh': '🛡️', 'Quốc phòng': '⚔️', 'PCCC': '🚒', 'Giao thông': '🛣️', 'Thủy lợi': '💧', 'Nông nghiệp': '🌾', 'Tư pháp': '⚖️', 'Nội vụ': '🗄️', 'Văn hóa': '🎭', 'Giáo dục': '🎓', 'Y tế': '⚕️', 'Xã hội': '❤️', 'Khiếu nại': '😠', 'Tố cáo': '🗣️', 'Khen thưởng': '🎖️', 'Kỷ luật': '📜', 'Chuyển đổi số': '🌐', 'Dữ liệu': '💾' };
-                    const keywords = ['Yêu cầu', 'Sản phẩm đầu ra', 'Thời hạn', 'Đơn vị phối hợp', 'Nội dung chính', 'Mục tiêu', 'Ghi chú', 'Kinh phí', 'Báo cáo', 'Thành lập', 'Kiểm tra', 'Họp'];
-                    const regex = new RegExp(`^(${keywords.join('|')}):`, 'gim');
-                    const processedText = summaryText.replace(regex, '|||$1:');
-                    const parts = processedText.split('|||').filter(p => p.trim() !== '');
-
-                    if (parts.length <= 1) {
-                         html = `<p class="text-gray-700 whitespace-pre-wrap">${summaryText}</p>`;
-                    } else {
-                        parts.forEach(part => {
-                            const partSplit = part.split(/:(.*)/s);
-                            const header = partSplit[0].trim();
-                            const content = partSplit[1] ? partSplit[1].trim() : '';
-                            if (!content) return;
-                            let selectedIcon = '🔹';
-                            for (const key in iconMap) {
-                                if (header.toLowerCase().includes(key.toLowerCase())) {
-                                    selectedIcon = iconMap[key];
-                                    break;
-                                }
-                            }
-                            html += `<div class="flex items-start mt-3"><div class="text-base mr-2 pt-1">${selectedIcon}</div><div class="flex-1"><h4 class="text-sm font-semibold text-gray-900">${header}:</h4><p class="text-sm text-gray-700 whitespace-pre-wrap">${content}</p></div></div>`;
-                        });
-                    }
-                } else {
-                    html = '<p class="text-gray-600 text-sm">Không có tóm tắt.</p>';
-                }
-                
-                if (doc.phongBanPhoiHop) {
-                    html += `
-                        <div class="flex items-start mt-4 pt-3 border-t border-dashed">
-                            <div class="text-base mr-2 pt-1">🤝</div>
-                            <div class="flex-1">
-                                <h4 class="text-sm font-semibold text-gray-900">Đơn vị phối hợp:</h4>
-                                <p class="text-sm text-gray-700">${doc.phongBanPhoiHop}</p>
-                                ${doc.chuyenVienPhoiHop ? `<p class="text-sm text-gray-700 mt-1"><strong>Chuyên viên:</strong> ${doc.chuyenVienPhoiHop}</p>` : ''}
-                            </div>
+            weekData.docs.sort((a, b) => {
+                let compare = 0;
+                if (sortBy === 'priority') compare = (b.priorityScore || 0) - (a.priorityScore || 0);
+                else if (sortBy === 'dueDate') compare = new Date(a.dueDate) - new Date(b.dueDate);
+                else if (sortBy === 'status') compare = a.status.localeCompare(b.status);
+                return sortOrder === 'desc' ? -compare : compare;
+            }).forEach(doc => {
+                const daysRemaining = calculateDaysRemaining(doc.dueDate);
+                const { text: statusText, color: statusColor } = getStatusInfo(daysRemaining, doc.status);
+                const { text: priorityText, color: priorityColor } = getPriorityInfo(doc.priorityScore);
+                const summaryHtml = formatSummary(doc.summary, doc);
+                const notesHtml = doc.notes ? `<h4 class="text-sm font-semibold text-gray-700 mt-4 mb-2">Lịch sử Ghi chú:</h4><div class="text-gray-600 text-sm whitespace-pre-wrap bg-yellow-50 p-3 rounded-md">${doc.notes}</div>` : '';
+                const isCompleted = doc.status === 'completed';
+                const docWrapper = document.createElement('div');
+                docWrapper.className = `document-wrapper ${isCompleted ? 'opacity-60' : ''}`;
+                let recurringIcon = '';
+                if (doc.recurringType === 'daily') recurringIcon = '☀️';
+                else if (doc.recurringType === 'weekly') recurringIcon = '📅';
+                else if (doc.recurringType === 'monthly') recurringIcon = '🈷️';
+                if (recurringIcon) recurringIcon = `<span class="inline-block mr-1" title="Lặp lại ${doc.recurringType}">${recurringIcon}</span>`;
+                const actionButtonsHtml = currentUserRole === 'admin' ? `
+                    <div class="w-full md:w-[12%] text-left md:text-right flex items-center space-x-1">
+                        <button class="status-toggle-btn p-2 text-gray-400 hover:text-green-600 rounded-full hover:bg-gray-200" data-id="${doc.id}" title="${isCompleted ? 'Mở lại công việc' : 'Đánh dấu Hoàn thành'}">${isCompleted ? `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12A8 8 0 1013 5.2"></path></svg>` : `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`}</button>
+                        <button class="edit-notes-btn p-2 text-gray-400 hover:text-yellow-600 rounded-full hover:bg-gray-200" data-id="${doc.id}" title="Sửa Ghi chú"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg></button>
+                        <button class="edit-btn p-2 text-gray-400 hover:text-blue-600 rounded-full hover:bg-gray-200" data-id="${doc.id}" title="Chỉnh sửa"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z"></path></svg></button>
+                        <button class="delete-btn p-2 text-gray-400 hover:text-red-600 rounded-full hover:bg-gray-200" data-id="${doc.id}" title="Xóa"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+                    </div>` : '<div class="w-full md:w-[12%]"></div>';
+                const noteSnippet = doc.notes ? doc.notes.split('\n')[0].substring(0, 30) + (doc.notes.length > 30 ? '...' : '') : '-';
+                docWrapper.innerHTML = `
+                    <div class="document-row flex flex-col md:flex-row md:items-center px-6 py-4 border-b border-gray-200 transition duration-200 ${isCompleted ? 'bg-gray-50' : 'bg-white'}">
+                        <div class="w-full md:w-[20%] flex items-center mb-4 md:mb-0">
+                            <button class="details-btn p-1 rounded-full hover:bg-gray-200" data-target="summary-${doc.id}"><svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
+                            <div class="ml-2"><div class="text-sm font-semibold text-gray-800 ${isCompleted ? 'line-through' : ''}">${recurringIcon}${doc.title}</div></div>
                         </div>
-                    `;
-                }
-                return html;
-            }
-            // =============================================================
-            // CÁC HÀM LOGIC CỦA ỨNG DỤNG
-            // =============================================================
+                        <div class="w-full md:w-[10%] text-left md:text-center text-sm text-gray-600 mb-2 md:mb-0"><span class="md:hidden font-medium text-gray-500">Lãnh đạo: </span>${doc.lanhDao || '-'}</div>
+                        <div class="w-full md:w-[10%] text-left md:text-center text-sm text-gray-600 mb-2 md:mb-0"><span class="md:hidden font-medium text-gray-500">Phòng ban: </span>${doc.phongBan || '-'}</div>
+                        <div class="w-full md:w-[10%] text-left md:text-center text-sm text-gray-600 mb-2 md:mb-0"><span class="md:hidden font-medium text-gray-500">Chuyên viên: </span>${doc.chuyenVien || '-'}</div>
+                        <div class="w-full md:w-[8%] text-left md:text-center text-sm mb-4 md:mb-0"><span class="px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${priorityColor}">${priorityText}</span></div>
+                        <div class="w-full md:w-[10%] text-left md:text-center text-sm text-gray-500 mb-2 md:mb-0"><span class="md:hidden font-medium text-gray-500">Ghi chú: </span>${noteSnippet}</div>
+                        <div class="w-full md:w-[10%] text-left md:text-center text-sm text-gray-600 mb-2 md:mb-0"><span class="md:hidden font-medium text-gray-500">Ngày đến hạn: </span><div>${new Date(doc.dueDate).toLocaleDateString('vi-VN')}</div></div>
+                        <div class="w-full md:w-[10%] text-left md:text-center text-sm mb-4 md:mb-0"><span class="px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColor}">${statusText}</span></div>
+                        ${actionButtonsHtml}
+                    </div>
+                    <div id="summary-${doc.id}" class="summary-content bg-white border-b border-gray-200">
+                        <div class="px-6 py-4 pl-16">
+                            <h4 class="text-sm font-semibold text-gray-700 mb-2">Tóm tắt nội dung:</h4>
+                            ${summaryHtml}
+                            ${notesHtml}
+                        </div>
+                    </div>`;
+                documentList.appendChild(docWrapper);
+            });
+        });
+        attachActionListeners();
+        updateSortButtons();
+    }
 
-            async function loadDocuments() {
-                try {
-                    const querySnapshot = await getDocs(collection(db, "documents"));
-                    documents = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                } catch (error) {
-                    console.error("Lỗi khi tải dữ liệu từ Firebase: ", error);
-                    alert("Không thể kết nối đến cơ sở dữ liệu. Vui lòng kiểm tra lại kết nối mạng.");
-                    documents = []; // Reset về mảng rỗng nếu lỗi
+    function attachActionListeners() {
+        if (currentUserRole === 'admin') {
+            document.querySelectorAll('.edit-btn').forEach(b => b.addEventListener('click', handleEdit));
+            document.querySelectorAll('.delete-btn').forEach(b => b.addEventListener('click', handleDelete));
+            document.querySelectorAll('.status-toggle-btn').forEach(b => b.addEventListener('click', handleStatusChange));
+            document.querySelectorAll('.edit-notes-btn').forEach(b => b.addEventListener('click', handleEditNotes));
+        }
+        document.querySelectorAll('.details-btn').forEach(b => b.addEventListener('click', handleToggleSummary));
+    }
+    
+    function handleToggleSummary(e) {
+        const button = e.currentTarget;
+        const targetId = button.dataset.target;
+        const summaryContent = document.getElementById(targetId);
+        if (summaryContent) {
+            button.classList.toggle('open');
+            summaryContent.classList.toggle('open');
+        }
+    }
+
+    function populateAllDropdowns() {
+        const allOption = '<option value="all">Tất cả</option>';
+        const phongBanList = [...new Set(allPersonnel.filter(p => p.rank > 2 && p.rank <= 4).map(p => p.name))];
+        const chuyenVienList = [...new Set(allPersonnel.filter(p => p.rank > 4).map(p => p.name))];
+        phongbanFilter.innerHTML = allOption + phongBanList.map(p => `<option value="${p}">${p}</option>`).join('');
+        chuyenvienFilter.innerHTML = allOption + chuyenVienList.map(p => `<option value="${p}">${p}</option>`).join('');
+    }
+    
+    function populateModalDropdowns(doc = {}) {
+        const defaultOption = '<option value="">-- Chọn --</option>';
+        selectLanhDao.innerHTML = defaultOption + allPersonnel.filter(p => p.rank <= 2).map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+        
+        const phongBanList = allPersonnel.filter(p => p.rank > 2 && p.rank <= 4);
+        const phongBanOptions = defaultOption + phongBanList.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+        selectPhongBan.innerHTML = phongBanOptions;
+        selectPhongBanPhoiHop.innerHTML = phongBanOptions;
+
+        const populateChuyenVienDropdown = (phongBanSelect, chuyenVienSelect, selectedChuyenVienName) => {
+            const selectedPhongBanName = phongBanSelect.value;
+            const manager = allPersonnel.find(p => p.name === selectedPhongBanName);
+            let chuyenVienOptions = allPersonnel.filter(p => p.rank > 4);
+            if (manager) {
+                chuyenVienOptions = allPersonnel.filter(p => p.rank > 4 && p.department === manager.department);
+            }
+            chuyenVienSelect.innerHTML = defaultOption + chuyenVienOptions.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+            if(selectedChuyenVienName) findAndSelectPersonnel(chuyenVienSelect, selectedChuyenVienName);
+        };
+        
+        findAndSelectPersonnel(selectLanhDao, doc.lanhDao);
+        findAndSelectPersonnel(selectPhongBan, doc.phongBan);
+        populateChuyenVienDropdown(selectPhongBan, selectChuyenVien, doc.chuyenVien);
+        
+        findAndSelectPersonnel(selectPhongBanPhoiHop, doc.phongBanPhoiHop);
+        populateChuyenVienDropdown(selectPhongBanPhoiHop, selectChuyenVienPhoiHop, doc.chuyenVienPhoiHop);
+    }
+
+    function openModal(doc = null) {
+        docForm.reset();
+        if (doc) {
+            modalTitle.textContent = doc.id ? 'Cập nhật Công việc' : 'Xác nhận thông tin từ AI';
+            docIdInput.value = doc.id || '';
+            docTitleInput.value = doc.title || '';
+            let summaryText = doc.summary;
+            if (typeof summaryText === 'object' && summaryText !== null) {
+                summaryText = JSON.stringify(summaryText, null, 2);
+            }
+            docSummaryInput.value = summaryText || '';
+
+            docNotesInput.value = doc.notes || '';
+            docIssueDateInput.value = doc.issueDate || new Date().toISOString().slice(0, 10);
+            docDueDateInput.value = doc.dueDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+            docStatusInput.value = doc.status || 'pending';
+            const priorityScoreInput = document.getElementById('doc-priority-score');
+            const priorityScoreValue = document.getElementById('priority-score-value');
+            const score = doc.priorityScore || 50;
+            priorityScoreInput.value = score;
+            priorityScoreValue.textContent = score;
+            priorityScoreInput.oninput = function() {
+                priorityScoreValue.textContent = this.value;
+            }
+            docRecurringInput.value = doc.recurringType || 'none';
+            populateModalDropdowns(doc);
+        } else {
+            modalTitle.textContent = 'Thêm Công việc mới';
+            docIdInput.value = '';
+            docIssueDateInput.value = new Date().toISOString().slice(0, 10);
+            docDueDateInput.value = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+            populateModalDropdowns();
+        }
+        modal.classList.remove('hidden');
+        setTimeout(() => { modal.classList.add('opacity-100'); modalContent.classList.remove('scale-95', 'opacity-0'); }, 10);
+    }
+
+    function closeModal() {
+        modalContent.classList.add('scale-95', 'opacity-0');
+        modal.classList.remove('opacity-100');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    }
+    
+    function openNotesModal(doc) {
+        notesDocIdInput.value = doc.id;
+        editDocNotesInput.value = doc.notes || '';
+        notesModal.classList.remove('hidden');
+        setTimeout(() => { notesModal.classList.add('opacity-100'); notesModalContent.classList.remove('scale-95', 'opacity-0'); }, 10);
+    }
+
+    function closeNotesModal() {
+        notesModalContent.classList.add('scale-95', 'opacity-0');
+        notesModal.classList.remove('opacity-100');
+        setTimeout(() => notesModal.classList.add('hidden'), 300);
+    }
+
+    function openExportModal() {
+        exportModal.classList.remove('hidden');
+        setTimeout(() => { exportModal.classList.add('opacity-100'); exportModalContent.classList.remove('scale-95', 'opacity-0'); }, 10);
+    }
+
+    function closeExportModal() {
+        exportModalContent.classList.add('scale-95', 'opacity-0');
+        exportModal.classList.remove('opacity-100');
+        setTimeout(() => exportModal.classList.add('hidden'), 300);
+    }
+
+    async function handleSubmit(e) {
+        e.preventDefault();
+        const id = docIdInput.value;
+        const docData = {
+            title: docTitleInput.value, summary: docSummaryInput.value, notes: docNotesInput.value,
+            issueDate: docIssueDateInput.value, dueDate: docDueDateInput.value, lanhDao: selectLanhDao.value,
+            phongBan: selectPhongBan.value, chuyenVien: selectChuyenVien.value, 
+            phongBanPhoiHop: selectPhongBanPhoiHop.value, chuyenVienPhoiHop: selectChuyenVienPhoiHop.value,
+            status: docStatusInput.value, priorityScore: parseInt(document.getElementById('doc-priority-score').value, 10), recurringType: docRecurringInput.value,
+        };
+
+        try {
+            if (id) {
+                const docRef = doc(db, "documents", id);
+                await setDoc(docRef, docData, { merge: true });
+                const index = documents.findIndex(d => d.id == id);
+                if (index !== -1) documents[index] = { ...documents[index], ...docData };
+            } else {
+                const newDocRef = doc(collection(db, "documents"));
+                docData.id = newDocRef.id;
+                await setDoc(newDocRef, docData);
+                documents.push(docData);
+            }
+            renderAll();
+            closeModal();
+        } catch (error) {
+            console.error("Lỗi khi lưu dữ liệu: ", error);
+            alert("Đã xảy ra lỗi khi lưu công việc. Vui lòng thử lại.");
+        }
+    }
+
+    function handleEdit(e) {
+        const id = e.currentTarget.dataset.id;
+        const docToEdit = documents.find(doc => doc.id === id);
+        if (docToEdit) openModal(docToEdit);
+    }
+    
+     function handleEditNotes(e) {
+        const id = e.currentTarget.dataset.id;
+        const docToEdit = documents.find(doc => doc.id === id);
+        if (docToEdit) openNotesModal(docToEdit);
+    }
+
+    async function handleSaveNote(e) {
+        e.preventDefault();
+        const id = notesDocIdInput.value;
+        const docToUpdate = documents.find(d => d.id === id);
+        if (docToUpdate) {
+            const now = new Date();
+            const timestamp = `[Cập nhật lúc: ${now.toLocaleTimeString('vi-VN')} ${now.toLocaleDateString('vi-VN')}]`;
+            const newNoteContent = editDocNotesInput.value;
+            const oldNotes = docToUpdate.notes ? docToUpdate.notes.split('\n').filter(line => !line.startsWith('[Cập nhật lúc:')).join('\n').trim() : '';
+            const updatedNotes = `${timestamp}\n${newNoteContent}\n\n${oldNotes}`.trim();
+
+            try {
+                const docRef = doc(db, "documents", id);
+                await setDoc(docRef, { notes: updatedNotes }, { merge: true });
+                docToUpdate.notes = updatedNotes;
+                renderAll();
+                closeNotesModal();
+            } catch (error) {
+                 console.error("Lỗi khi lưu ghi chú: ", error);
+                 alert("Đã xảy ra lỗi khi lưu ghi chú.");
+            }
+        }
+    }
+    
+    async function handleStatusChange(e) {
+        const id = e.currentTarget.dataset.id;
+        const docToUpdate = documents.find(d => d.id === id);
+        if (docToUpdate) {
+            let updatedData = {};
+            if (docToUpdate.status === 'pending' && docToUpdate.recurringType && docToUpdate.recurringType !== 'none') {
+                const currentDueDate = new Date(docToUpdate.dueDate);
+                let nextDueDate;
+                switch (docToUpdate.recurringType) {
+                    case 'daily': nextDueDate = new Date(currentDueDate.setDate(currentDueDate.getDate() + 1)); break;
+                    case 'weekly': nextDueDate = new Date(currentDueDate.setDate(currentDueDate.getDate() + 7)); break;
+                    case 'monthly': nextDueDate = new Date(currentDueDate.setMonth(currentDueDate.getMonth() + 1)); break;
                 }
+                updatedData.dueDate = nextDueDate ? nextDueDate.toISOString().slice(0, 10) : docToUpdate.dueDate;
+                if (!nextDueDate) updatedData.status = 'completed';
+            } else {
+                updatedData.status = docToUpdate.status === 'completed' ? 'pending' : 'completed';
             }
             
-            function getWeekInfo(d) {
-                const date = new Date(d);
-                date.setHours(0, 0, 0, 0);
-                const day = date.getDay();
-                const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-                const startOfWeek = new Date(date.setDate(diff));
-                const endOfWeek = new Date(new Date(startOfWeek).setDate(startOfWeek.getDate() + 6));
-                const onejan = new Date(startOfWeek.getFullYear(), 0, 1);
-                const weekNumber = Math.ceil((((startOfWeek - onejan) / 86400000) + onejan.getDay() + 1) / 7);
-                return { weekNumber, year: startOfWeek.getFullYear(), start: startOfWeek, end: endOfWeek, key: `${startOfWeek.getFullYear()}-${weekNumber}` };
+            try {
+                const docRef = doc(db, "documents", id);
+                await setDoc(docRef, updatedData, { merge: true });
+                Object.assign(docToUpdate, updatedData);
+                renderAll();
+            } catch (error) {
+                console.error("Lỗi khi cập nhật trạng thái: ", error);
+                alert("Đã xảy ra lỗi khi cập nhật trạng thái.");
             }
+        }
+    }
 
-            function calculateDaysRemaining(dueDateString) {
-                const today = new Date();
-                const dueDate = new Date(dueDateString);
-                today.setHours(0, 0, 0, 0);
-                dueDate.setHours(0, 0, 0, 0);
-                return Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
+    async function handleDelete(e) {
+        const id = e.currentTarget.dataset.id;
+        if (confirm('Đồng chí có chắc chắn muốn xóa công việc này không?')) {
+            try {
+                await deleteDoc(doc(db, "documents", id));
+                documents = documents.filter(doc => doc.id !== id);
+                renderAll();
+            } catch (error) {
+                console.error("Lỗi khi xóa: ", error);
+                alert("Đã xảy ra lỗi khi xóa công việc.");
             }
+        }
+    }
 
-            function getStatusInfo(days, status) {
-                if (status === 'completed') return { text: 'Hoàn thành', color: 'bg-gray-400 text-gray-800' };
-                if (days < 0) return { text: `Trễ ${Math.abs(days)} ngày`, color: 'bg-red-600 text-white font-bold' };
-                if (days === 0) return { text: `Hạn hôm nay`, color: 'bg-red-500 text-white' };
-                if (days <= 3) return { text: `Còn ${days} ngày`, color: 'bg-yellow-500 text-white' };
-                return { text: `Còn ${days} ngày`, color: 'bg-green-500 text-white' };
-            }
-
-            function getPriorityInfo(score) {
-    score = parseInt(score, 10) || 0;
-    if (score >= 90) return { text: `Hỏa tốc (${score})`, color: 'bg-red-700 text-white' };
-    if (score >= 75) return { text: `Khẩn cấp (${score})`, color: 'bg-red-500 text-white' };
-    if (score >= 50) return { text: `Quan trọng (${score})`, color: 'bg-yellow-500 text-white' };
-    if (score >= 25) return { text: `Thường (${score})`, color: 'bg-blue-500 text-white' };
-    return { text: `Thấp (${score})`, color: 'bg-gray-500 text-white' };
-}
-            }
-
-            function updateSortButtons() {
-                const downArrow = `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>`;
-                const upArrow = `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd"></path></svg>`;
-                Object.keys(sortHeaders).forEach(key => {
-                    const button = sortHeaders[key].querySelector('button');
-                    button.innerHTML = key === sortBy ? (sortOrder === 'desc' ? downArrow : upArrow) : '';
-                });
-            }
-
-            function renderDashboard() {
-                const total = documents.length;
-                const completed = documents.filter(d => d.status === 'completed').length;
-                const pending = documents.filter(d => d.status === 'pending' && calculateDaysRemaining(d.dueDate) >= 0).length;
-                const overdue = documents.filter(d => d.status === 'pending' && calculateDaysRemaining(d.dueDate) < 0).length;
-                document.getElementById('kpi-total').textContent = total;
-                document.getElementById('kpi-completed').textContent = completed;
-                document.getElementById('kpi-pending').textContent = pending;
-                document.getElementById('kpi-overdue').textContent = overdue;
-            }
-
-            function renderAll() {
-                renderDashboard();
-                renderDocuments();
-            }
-            
-            function renderDocuments() {
-                documentList.innerHTML = '';
-                let filteredDocuments = documents.filter(doc => {
-                    const searchTerm = searchInput.value.toLowerCase();
-                    const status = statusFilter.value;
-                    const phongBan = phongbanFilter.value;
-                    const chuyenVien = chuyenvienFilter.value;
-                    if (searchTerm && !(doc.title.toLowerCase().includes(searchTerm) || doc.summary.toLowerCase().includes(searchTerm) || (doc.notes && doc.notes.toLowerCase().includes(searchTerm)))) return false;
-                    if (status !== 'all') {
-                         if (status === 'overdue') { if (doc.status !== 'pending' || calculateDaysRemaining(doc.dueDate) >= 0) return false; } 
-                         else if (status === 'pending') { if (doc.status !== 'pending' || calculateDaysRemaining(doc.dueDate) < 0) return false; }
-                         else if (doc.status !== status) return false;
-                    }
-                    if (phongBan !== 'all' && doc.phongBan !== phongBan) return false;
-                    if (chuyenVien !== 'all' && doc.chuyenVien !== chuyenVien) return false;
-                });
-                emptyState.classList.toggle('hidden', filteredDocuments.length > 0);
-                const priorityOrder = { 'Khẩn cấp': 3, 'Quan trọng': 2, 'Thường': 1 };
-                const docsByWeek = {};
-                const currentWeekInfo = getWeekInfo(new Date());
-                filteredDocuments.forEach(doc => {
-                    let weekInfo = (doc.status === 'pending' && new Date(doc.dueDate) < currentWeekInfo.start) ? currentWeekInfo : getWeekInfo(new Date(doc.dueDate));
-                    if (!docsByWeek[weekInfo.key]) docsByWeek[weekInfo.key] = { info: weekInfo, docs: [] };
-                    docsByWeek[weekInfo.key].docs.push(doc);
-                });
-
-                Object.keys(docsByWeek).sort((a, b) => b.localeCompare(a)).forEach(weekKey => {
-                    const weekData = docsByWeek[weekKey];
-                    const weekHeader = document.createElement('div');
-                    weekHeader.className = 'week-header px-6 py-2 text-sm sticky top-0 z-0';
-                    weekHeader.textContent = `TUẦN ${weekData.info.weekNumber} (${weekData.info.start.toLocaleDateString('vi-VN')} - ${weekData.info.end.toLocaleDateString('vi-VN')})`;
-                    documentList.appendChild(weekHeader);
-
-                    weekData.docs.sort((a, b) => {
-                        let compare = 0;
-                        if (sortBy === 'priority') compare = (b.priorityScore || 0) - (a.priorityScore || 0);
-                        else if (sortBy === 'dueDate') compare = new Date(a.dueDate) - new Date(b.dueDate);
-                        else if (sortBy === 'status') compare = a.status.localeCompare(b.status);
-                        return sortOrder === 'desc' ? -compare : compare;
-                    }).forEach(doc => {
-                        const daysRemaining = calculateDaysRemaining(doc.dueDate);
-                        const { text: statusText, color: statusColor } = getStatusInfo(daysRemaining, doc.status);
-                        const { text: priorityText, color: priorityColor } = getPriorityInfo(doc.priorityScore);
-                        const summaryHtml = formatSummary(doc.summary, doc);
-                        const notesHtml = doc.notes ? `<h4 class="text-sm font-semibold text-gray-700 mt-4 mb-2">Lịch sử Ghi chú:</h4><div class="text-gray-600 text-sm whitespace-pre-wrap bg-yellow-50 p-3 rounded-md">${doc.notes}</div>` : '';
-                        const isCompleted = doc.status === 'completed';
-                        const docWrapper = document.createElement('div');
-                        docWrapper.className = `document-wrapper ${isCompleted ? 'opacity-60' : ''}`;
-                        let recurringIcon = '';
-                        if (doc.recurringType === 'daily') recurringIcon = '☀️';
-                        else if (doc.recurringType === 'weekly') recurringIcon = '📅';
-                        else if (doc.recurringType === 'monthly') recurringIcon = '🈷️';
-                        if (recurringIcon) recurringIcon = `<span class="inline-block mr-1" title="Lặp lại ${doc.recurringType}">${recurringIcon}</span>`;
-                        const actionButtonsHtml = currentUserRole === 'admin' ? `
-                            <div class="w-full md:w-[12%] text-left md:text-right flex items-center space-x-1">
-                                <button class="status-toggle-btn p-2 text-gray-400 hover:text-green-600 rounded-full hover:bg-gray-200" data-id="${doc.id}" title="${isCompleted ? 'Mở lại công việc' : 'Đánh dấu Hoàn thành'}">${isCompleted ? `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12A8 8 0 1013 5.2"></path></svg>` : `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`}</button>
-                                <button class="edit-notes-btn p-2 text-gray-400 hover:text-yellow-600 rounded-full hover:bg-gray-200" data-id="${doc.id}" title="Sửa Ghi chú"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg></button>
-                                <button class="edit-btn p-2 text-gray-400 hover:text-blue-600 rounded-full hover:bg-gray-200" data-id="${doc.id}" title="Chỉnh sửa"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z"></path></svg></button>
-                                <button class="delete-btn p-2 text-gray-400 hover:text-red-600 rounded-full hover:bg-gray-200" data-id="${doc.id}" title="Xóa"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
-                            </div>` : '<div class="w-full md:w-[12%]"></div>';
-                        const noteSnippet = doc.notes ? doc.notes.split('\n')[0].substring(0, 30) + (doc.notes.length > 30 ? '...' : '') : '-';
-                        docWrapper.innerHTML = `
-                            <div class="document-row flex flex-col md:flex-row md:items-center px-6 py-4 border-b border-gray-200 transition duration-200 ${isCompleted ? 'bg-gray-50' : 'bg-white'}">
-                                <div class="w-full md:w-[20%] flex items-center mb-4 md:mb-0">
-                                    <button class="details-btn p-1 rounded-full hover:bg-gray-200" data-target="summary-${doc.id}"><svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
-                                    <div class="ml-2"><div class="text-sm font-semibold text-gray-800 ${isCompleted ? 'line-through' : ''}">${recurringIcon}${doc.title}</div></div>
-                                </div>
-                                <div class="w-full md:w-[10%] text-left md:text-center text-sm text-gray-600 mb-2 md:mb-0"><span class="md:hidden font-medium text-gray-500">Lãnh đạo: </span>${doc.lanhDao || '-'}</div>
-                                <div class="w-full md:w-[10%] text-left md:text-center text-sm text-gray-600 mb-2 md:mb-0"><span class="md:hidden font-medium text-gray-500">Phòng ban: </span>${doc.phongBan || '-'}</div>
-                                <div class="w-full md:w-[10%] text-left md:text-center text-sm text-gray-600 mb-2 md:mb-0"><span class="md:hidden font-medium text-gray-500">Chuyên viên: </span>${doc.chuyenVien || '-'}</div>
-                                <div class="w-full md:w-[8%] text-left md:text-center text-sm mb-4 md:mb-0"><span class="px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${priorityColor}">${priorityText}</span></div>
-                                <div class="w-full md:w-[10%] text-left md:text-center text-sm text-gray-500 mb-2 md:mb-0"><span class="md:hidden font-medium text-gray-500">Ghi chú: </span>${noteSnippet}</div>
-                                <div class="w-full md:w-[10%] text-left md:text-center text-sm text-gray-600 mb-2 md:mb-0"><span class="md:hidden font-medium text-gray-500">Ngày đến hạn: </span><div>${new Date(doc.dueDate).toLocaleDateString('vi-VN')}</div></div>
-                                <div class="w-full md:w-[10%] text-left md:text-center text-sm mb-4 md:mb-0"><span class="px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColor}">${statusText}</span></div>
-                                ${actionButtonsHtml}
-                            </div>
-                            <div id="summary-${doc.id}" class="summary-content bg-white border-b border-gray-200">
-                                <div class="px-6 py-4 pl-16">
-                                    <h4 class="text-sm font-semibold text-gray-700 mb-2">Tóm tắt nội dung:</h4>
-                                    ${summaryHtml}
-                                    ${notesHtml}
-                                </div>
-                            </div>`;
-                        documentList.appendChild(docWrapper);
-                    });
-                });
-                attachActionListeners();
-                updateSortButtons();
-            }
-
-            function attachActionListeners() {
-                if (currentUserRole === 'admin') {
-                    document.querySelectorAll('.edit-btn').forEach(b => b.addEventListener('click', handleEdit));
-                    document.querySelectorAll('.delete-btn').forEach(b => b.addEventListener('click', handleDelete));
-                    document.querySelectorAll('.status-toggle-btn').forEach(b => b.addEventListener('click', handleStatusChange));
-                    document.querySelectorAll('.edit-notes-btn').forEach(b => b.addEventListener('click', handleEditNotes));
-                }
-                document.querySelectorAll('.details-btn').forEach(b => b.addEventListener('click', handleToggleSummary));
-            }
-            
-            function handleToggleSummary(e) {
-                const button = e.currentTarget;
-                const targetId = button.dataset.target;
-                const summaryContent = document.getElementById(targetId);
-                if (summaryContent) {
-                    button.classList.toggle('open');
-                    summaryContent.classList.toggle('open');
-                }
-            }
-
-            function populateAllDropdowns() {
-                const allOption = '<option value="all">Tất cả</option>';
-                const phongBanList = [...new Set(allPersonnel.filter(p => p.rank > 2 && p.rank <= 4).map(p => p.name))];
-                const chuyenVienList = [...new Set(allPersonnel.filter(p => p.rank > 4).map(p => p.name))];
-                phongbanFilter.innerHTML = allOption + phongBanList.map(p => `<option value="${p}">${p}</option>`).join('');
-                chuyenvienFilter.innerHTML = allOption + chuyenVienList.map(p => `<option value="${p}">${p}</option>`).join('');
-            }
-            
-            function populateModalDropdowns(doc = {}) {
-                const defaultOption = '<option value="">-- Chọn --</option>';
-                selectLanhDao.innerHTML = defaultOption + allPersonnel.filter(p => p.rank <= 2).map(p => `<option value="${p.name}">${p.name}</option>`).join('');
-                
-                const phongBanList = allPersonnel.filter(p => p.rank > 2 && p.rank <= 4);
-                const phongBanOptions = defaultOption + phongBanList.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
-                selectPhongBan.innerHTML = phongBanOptions;
-                selectPhongBanPhoiHop.innerHTML = phongBanOptions;
-
-                const populateChuyenVienDropdown = (phongBanSelect, chuyenVienSelect, selectedChuyenVienName) => {
-                    const selectedPhongBanName = phongBanSelect.value;
-                    const manager = allPersonnel.find(p => p.name === selectedPhongBanName);
-                    let chuyenVienOptions = allPersonnel.filter(p => p.rank > 4);
-                    if (manager) {
-                        chuyenVienOptions = allPersonnel.filter(p => p.rank > 4 && p.department === manager.department);
-                    }
-                    chuyenVienSelect.innerHTML = defaultOption + chuyenVienOptions.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
-                    if(selectedChuyenVienName) findAndSelectPersonnel(chuyenVienSelect, selectedChuyenVienName);
-                };
-                
-                // Sử dụng hàm findAndSelectPersonnel để chọn giá trị
-                findAndSelectPersonnel(selectLanhDao, doc.lanhDao);
-                findAndSelectPersonnel(selectPhongBan, doc.phongBan);
-                populateChuyenVienDropdown(selectPhongBan, selectChuyenVien, doc.chuyenVien);
-                
-                findAndSelectPersonnel(selectPhongBanPhoiHop, doc.phongBanPhoiHop);
-                populateChuyenVienDropdown(selectPhongBanPhoiHop, selectChuyenVienPhoiHop, doc.chuyenVienPhoiHop);
-            }
-
-            function openModal(doc = null) {
-                docForm.reset();
-                if (doc) {
-                    modalTitle.textContent = doc.id ? 'Cập nhật Công việc' : 'Xác nhận thông tin từ AI';
-                    docIdInput.value = doc.id || '';
-                    docTitleInput.value = doc.title || '';
-
-                    // [FIX] Xử lý lỗi [object Object]
-                    let summaryText = doc.summary;
-                    if (typeof summaryText === 'object' && summaryText !== null) {
-                        summaryText = JSON.stringify(summaryText, null, 2); // Chuyển object thành chuỗi JSON để hiển thị
-                    }
-                    docSummaryInput.value = summaryText || '';
-
-                    docNotesInput.value = doc.notes || '';
-                    docIssueDateInput.value = doc.issueDate || new Date().toISOString().slice(0, 10);
-                    docDueDateInput.value = doc.dueDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-                    docStatusInput.value = doc.status || 'pending';
-const priorityScoreInput = document.getElementById('doc-priority-score');
-const priorityScoreValue = document.getElementById('priority-score-value');
-const score = doc.priorityScore || 50; // Lấy điểm từ AI hoặc mặc định là 50
-priorityScoreInput.value = score;
-priorityScoreValue.textContent = score;
-
-// Cập nhật giá trị hiển thị khi người dùng kéo thanh trượt
-priorityScoreInput.oninput = function() {
-    priorityScoreValue.textContent = this.value;
-}
-                    docRecurringInput.value = doc.recurringType || 'none';
-                    populateModalDropdowns(doc);
-                } else {
-                    modalTitle.textContent = 'Thêm Công việc mới';
-                    docIdInput.value = '';
-                    docIssueDateInput.value = new Date().toISOString().slice(0, 10);
-                    docDueDateInput.value = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-                    populateModalDropdowns();
-                }
-                modal.classList.remove('hidden');
-                setTimeout(() => { modal.classList.add('opacity-100'); modalContent.classList.remove('scale-95', 'opacity-0'); }, 10);
-            }
-
-            function closeModal() {
-                modalContent.classList.add('scale-95', 'opacity-0');
-                modal.classList.remove('opacity-100');
-                setTimeout(() => modal.classList.add('hidden'), 300);
-            }
-            
-            function openNotesModal(doc) {
-                notesDocIdInput.value = doc.id;
-                editDocNotesInput.value = doc.notes || '';
-                notesModal.classList.remove('hidden');
-                setTimeout(() => { notesModal.classList.add('opacity-100'); notesModalContent.classList.remove('scale-95', 'opacity-0'); }, 10);
-            }
-
-            function closeNotesModal() {
-                notesModalContent.classList.add('scale-95', 'opacity-0');
-                notesModal.classList.remove('opacity-100');
-                setTimeout(() => notesModal.classList.add('hidden'), 300);
-            }
-
-            function openExportModal() {
-                exportModal.classList.remove('hidden');
-                setTimeout(() => { exportModal.classList.add('opacity-100'); exportModalContent.classList.remove('scale-95', 'opacity-0'); }, 10);
-            }
-
-            function closeExportModal() {
-                exportModalContent.classList.add('scale-95', 'opacity-0');
-                exportModal.classList.remove('opacity-100');
-                setTimeout(() => exportModal.classList.add('hidden'), 300);
-            }
-
-            async function handleSubmit(e) {
-                e.preventDefault();
-                const id = docIdInput.value;
-                const docData = {
-                    title: docTitleInput.value, summary: docSummaryInput.value, notes: docNotesInput.value,
-                    issueDate: docIssueDateInput.value, dueDate: docDueDateInput.value, lanhDao: selectLanhDao.value,
-                    phongBan: selectPhongBan.value, chuyenVien: selectChuyenVien.value, 
-                    phongBanPhoiHop: selectPhongBanPhoiHop.value, chuyenVienPhoiHop: selectChuyenVienPhoiHop.value,
-                    status: docStatusInput.value, priorityScore: parseInt(document.getElementById('doc-priority-score').value, 10), recurringType: docRecurringInput.value,
-                };
-
-                try {
-                    if (id) { // Cập nhật công việc đã có
-                        const docRef = doc(db, "documents", id);
-                        await setDoc(docRef, docData, { merge: true }); // Dùng merge để không ghi đè các trường khác
-                        const index = documents.findIndex(d => d.id == id);
-                        if (index !== -1) documents[index] = { ...documents[index], ...docData };
-                    } else { // Thêm công việc mới
-                        const newDocRef = doc(collection(db, "documents")); // Tự tạo ID mới
-                        docData.id = newDocRef.id;
-                        await setDoc(newDocRef, docData);
-                        documents.push(docData);
-                    }
-                    renderAll();
-                    closeModal();
-                } catch (error) {
-                    console.error("Lỗi khi lưu dữ liệu: ", error);
-                    alert("Đã xảy ra lỗi khi lưu công việc. Vui lòng thử lại.");
-                }
-            }
-
-            function handleEdit(e) {
-                const id = e.currentTarget.dataset.id;
-                const docToEdit = documents.find(doc => doc.id === id);
-                if (docToEdit) openModal(docToEdit);
-            }
-            
-             function handleEditNotes(e) {
-                const id = e.currentTarget.dataset.id;
-                const docToEdit = documents.find(doc => doc.id === id);
-                if (docToEdit) openNotesModal(docToEdit);
-            }
-
-            async function handleSaveNote(e) {
-                e.preventDefault();
-                const id = notesDocIdInput.value;
-                const docToUpdate = documents.find(d => d.id === id);
-                if (docToUpdate) {
-                    const now = new Date();
-                    const timestamp = `[Cập nhật lúc: ${now.toLocaleTimeString('vi-VN')} ${now.toLocaleDateString('vi-VN')}]`;
-                    const newNoteContent = editDocNotesInput.value;
-                    const oldNotes = docToUpdate.notes ? docToUpdate.notes.split('\n').filter(line => !line.startsWith('[Cập nhật lúc:')).join('\n').trim() : '';
-                    const updatedNotes = `${timestamp}\n${newNoteContent}\n\n${oldNotes}`.trim();
-
-                    try {
-                        const docRef = doc(db, "documents", id);
-                        await setDoc(docRef, { notes: updatedNotes }, { merge: true }); // Chỉ cập nhật trường notes
-                        docToUpdate.notes = updatedNotes; // Cập nhật local data
-                        renderAll();
-                        closeNotesModal();
-                    } catch (error) {
-                         console.error("Lỗi khi lưu ghi chú: ", error);
-                         alert("Đã xảy ra lỗi khi lưu ghi chú.");
-                    }
-                }
-            }
-            
-            async function handleStatusChange(e) {
-                const id = e.currentTarget.dataset.id;
-                const docToUpdate = documents.find(d => d.id === id);
-                if (docToUpdate) {
-                    let updatedData = {};
-                    if (docToUpdate.status === 'pending' && docToUpdate.recurringType && docToUpdate.recurringType !== 'none') {
-                        // Xử lý công việc lặp lại
-                        const currentDueDate = new Date(docToUpdate.dueDate);
-                        let nextDueDate;
-                        switch (docToUpdate.recurringType) {
-                            case 'daily': nextDueDate = new Date(currentDueDate.setDate(currentDueDate.getDate() + 1)); break;
-                            case 'weekly': nextDueDate = new Date(currentDueDate.setDate(currentDueDate.getDate() + 7)); break;
-                            case 'monthly': nextDueDate = new Date(currentDueDate.setMonth(currentDueDate.getMonth() + 1)); break;
-                        }
-                        updatedData.dueDate = nextDueDate ? nextDueDate.toISOString().slice(0, 10) : docToUpdate.dueDate;
-                        if (!nextDueDate) updatedData.status = 'completed';
-                    } else {
-                        updatedData.status = docToUpdate.status === 'completed' ? 'pending' : 'completed';
-                    }
-                    
-                    try {
-                        const docRef = doc(db, "documents", id);
-                        await setDoc(docRef, updatedData, { merge: true });
-                        Object.assign(docToUpdate, updatedData); // Cập nhật local data
-                        renderAll();
-                    } catch (error) {
-                        console.error("Lỗi khi cập nhật trạng thái: ", error);
-                        alert("Đã xảy ra lỗi khi cập nhật trạng thái.");
-                    }
-                }
-            }
-
-            async function handleDelete(e) {
-                const id = e.currentTarget.dataset.id;
-                if (confirm('Đồng chí có chắc chắn muốn xóa công việc này không?')) {
-                    try {
-                        await deleteDoc(doc(db, "documents", id));
-                        documents = documents.filter(doc => doc.id !== id);
-                        renderAll();
-                    } catch (error) {
-                        console.error("Lỗi khi xóa: ", error);
-                        alert("Đã xảy ra lỗi khi xóa công việc.");
-                    }
-                }
-            }
-
-            function setSort(column) {
-                sortBy = column;
-                sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
-                renderDocuments();
-            }
-            
-            function handleExportReport(exportType) {
-                let docsToExport;
-                let reportTitle;
-                switch(exportType) {
-                    case 'all': docsToExport = [...documents]; reportTitle = 'BÁO CÁO TOÀN BỘ CÔNG VIỆC'; break;
-                    case 'completed': docsToExport = documents.filter(doc => doc.status === 'completed'); reportTitle = 'BÁO CÁO CÔNG VIỆC ĐÃ HOÀN THÀNH'; break;
-                    case 'pending': docsToExport = documents.filter(doc => doc.status === 'pending' && calculateDaysRemaining(doc.dueDate) >= 0); reportTitle = 'BÁO CÁO CÔNG VIỆC ĐANG XỬ LÝ'; break;
-                    case 'overdue': docsToExport = documents.filter(doc => doc.status === 'pending' && calculateDaysRemaining(doc.dueDate) < 0); reportTitle = 'BÁO CÁO CÔNG VIỆC TRỄ HẠN'; break;
-                    default: return;
-                }
-                docsToExport.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
-                const reportDate = new Date().toLocaleDateString('vi-VN');
-                let reportHtml = `<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><title>${reportTitle}</title><style>body{font-family:'Times New Roman',serif;font-size:13pt;margin:2cm}h1,h2{text-align:center;margin:0;font-weight:bold}h1{font-size:14pt}h2{font-size:16pt;margin-bottom:20px}table{width:100%;border-collapse:collapse;margin-top:15px}th,td{border:1px solid black;padding:8px;text-align:left;vertical-align:top}th{font-weight:bold;text-align:center}.no-print{margin-top:30px;text-align:center}@media print{.no-print{display:none}}</style></head><body><h1>UBND XÃ ĐỨC LẬP</h1><hr style="width:50%;border:1px solid black"><h2>${reportTitle}<br><span style="font-weight:normal;font-size:12pt">(Tính đến ngày ${reportDate})</span></h2><table><thead><tr><th>STT</th><th>Nội dung / Trích yếu</th><th>Chuyên viên</th><th>Mức độ</th><th>Hạn xử lý</th><th>Ghi chú</th></tr></thead><tbody>`;
-                if (docsToExport.length === 0) {
-                    reportHtml += '<tr><td colspan="6" style="text-align:center;">Không có công việc nào.</td></tr>';
-                } else {
-                    docsToExport.forEach((doc, index) => {
-                        reportHtml += `<tr><td style="text-align:center">${index + 1}</td><td>${doc.title}</td><td>${doc.chuyenVien || '-'}</td><td style="text-align:center">${doc.priority || 'Thường'}</td><td style="text-align:center">${new Date(doc.dueDate).toLocaleDateString('vi-VN')}</td><td>${doc.notes || ''}</td></tr>`;
-                    });
-                }
-                reportHtml += `</tbody></table><div class="no-print"><button onclick="window.print()">In Báo cáo</button></div></body></html>`;
-                const reportWindow = window.open('', '_blank');
-                reportWindow.document.write(reportHtml);
-                reportWindow.document.close();
-                closeExportModal();
-            }
-
-            /**
-             * [HÀM TỐI ƯU HÓA] Gửi yêu cầu đến Google Gemini API, hỗ trợ cả văn bản và tệp tin.
-             */
-            async function callGeminiGenerativeAPI(content, retries = 3, delay = 2000) {
+    function setSort(column) {
+        sortBy = column;
+        sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+        renderDocuments();
+    }
+    
+    function handleExportReport(exportType) {
+        let docsToExport;
+        let reportTitle;
+        switch(exportType) {
+            case 'all': docsToExport = [...documents]; reportTitle = 'BÁO CÁO TOÀN BỘ CÔNG VIỆC'; break;
+            case 'completed': docsToExport = documents.filter(doc => doc.status === 'completed'); reportTitle = 'BÁO CÁO CÔNG VIỆC ĐÃ HOÀN THÀNH'; break;
+            case 'pending': docsToExport = documents.filter(doc => doc.status === 'pending' && calculateDaysRemaining(doc.dueDate) >= 0); reportTitle = 'BÁO CÁO CÔNG VIỆC ĐANG XỬ LÝ'; break;
+            case 'overdue': docsToExport = documents.filter(doc => doc.status === 'pending' && calculateDaysRemaining(doc.dueDate) < 0); reportTitle = 'BÁO CÁO CÔNG VIỆC TRỄ HẠN'; break;
+            default: return;
+        }
+        docsToExport.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+        const reportDate = new Date().toLocaleDateString('vi-VN');
+        let reportHtml = `<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><title>${reportTitle}</title><style>body{font-family:'Times New Roman',serif;font-size:13pt;margin:2cm}h1,h2{text-align:center;margin:0;font-weight:bold}h1{font-size:14pt}h2{font-size:16pt;margin-bottom:20px}table{width:100%;border-collapse:collapse;margin-top:15px}th,td{border:1px solid black;padding:8px;text-align:left;vertical-align:top}th{font-weight:bold;text-align:center}.no-print{margin-top:30px;text-align:center}@media print{.no-print{display:none}}</style></head><body><h1>UBND XÃ ĐỨC LẬP</h1><hr style="width:50%;border:1px solid black"><h2>${reportTitle}<br><span style="font-weight:normal;font-size:12pt">(Tính đến ngày ${reportDate})</span></h2><table><thead><tr><th>STT</th><th>Nội dung / Trích yếu</th><th>Chuyên viên</th><th>Mức độ</th><th>Hạn xử lý</th><th>Ghi chú</th></tr></thead><tbody>`;
+        if (docsToExport.length === 0) {
+            reportHtml += '<tr><td colspan="6" style="text-align:center;">Không có công việc nào.</td></tr>';
+        } else {
+            docsToExport.forEach((doc, index) => {
+                reportHtml += `<tr><td style="text-align:center">${index + 1}</td><td>${doc.title}</td><td>${doc.chuyenVien || '-'}</td><td style="text-align:center">${getPriorityInfo(doc.priorityScore).text}</td><td style="text-align:center">${new Date(doc.dueDate).toLocaleDateString('vi-VN')}</td><td>${doc.notes || ''}</td></tr>`;
+            });
+        }
+        reportHtml += `</tbody></table><div class="no-print"><button onclick="window.print()">In Báo cáo</button></div></body></html>`;
+        const reportWindow = window.open('', '_blank');
+        reportWindow.document.write(reportHtml);
+        reportWindow.document.close();
+        closeExportModal();
+    }
+    
+    async function callGeminiGenerativeAPI(content, retries = 3, delay = 2000) {
                 // [PROMPT TỐI ƯU HÓA] - Rút gọn, tập trung vào danh sách nhân sự và cung cấp ví dụ mẫu để AI học theo.
 const prompt = `Trong vai trò là Thủ tướng Chính phủ nước Cộng hòa xã hội chủ nghĩa Việt Nam - Phạm Minh Chính, đồng chí hãy nghiên cứu kỹ nội dung văn bản được giao. Với tinh thần chỉ đạo quyết liệt, toàn diện, hiệu quả, "việc hôm nay chớ để ngày mai", đồng chí hãy đưa ra các quyết sách phân công, chỉ đạo xử lý và trả về kết quả dưới định dạng JSON.
 Yêu cầu:
@@ -1511,208 +1475,183 @@ Phụ trách giải quyết thủ tục hành chính về lĩnh vực đất đa
 }
 \`\`\`
 `;               
- const parts = [{ "text": prompt }];
-                if (content.textContent) {
-                    parts.push({ "text": content.textContent });
-                } else if (content.base64Data) {
-                    parts.push({ "inline_data": { "mime_type": content.rawMimeType, "data": content.base64Data } });
-                } else {
-                    throw new Error("Đầu vào cho AI không hợp lệ.");
+        const parts = [{ "text": prompt }];
+        if (content.textContent) {
+            parts.push({ "text": content.textContent });
+        } else if (content.base64Data) {
+            parts.push({ "inline_data": { "mime_type": content.rawMimeType, "data": content.base64Data } });
+        } else {
+            throw new Error("Đầu vào cho AI không hợp lệ.");
+        }
+
+        const payload = { "contents": [{ "parts": parts }] };
+        const apiKey = "AIzaSyD6zgS07koTtV2rTu1-IkWaED4XcbsJNts";
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+        try {
+            let response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (!response.ok) {
+                if (response.status === 429 && retries > 0) {
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return callGeminiGenerativeAPI(content, retries - 1, delay * 2);
                 }
-
-                const payload = { "contents": [{ "parts": parts }] };
-                const apiKey = "AIzaSyD6zgS07koTtV2rTu1-IkWaED4XcbsJNts";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-
-                try {
-                    let response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                    if (!response.ok) {
-                        if (response.status === 429 && retries > 0) {
-                            await new Promise(resolve => setTimeout(resolve, delay));
-                            return callGeminiGenerativeAPI(content, retries - 1, delay * 2);
-                        }
-                        const errorData = await response.json();
-                        throw new Error(`API call failed with status ${response.status}: ${JSON.stringify(errorData)}`);
-                    }
-                    const result = await response.json();
-                    if (result.candidates && result.candidates[0].content.parts[0].text) {
-                        let textResponse = result.candidates[0].content.parts[0].text;
-                        const jsonMatch = textResponse.match(/```json\s*([\s\S]*?)\s*```/);
-                        let jsonString = jsonMatch ? jsonMatch[1] : textResponse;
-                        const startIndex = jsonString.indexOf('{');
-                        const endIndex = jsonString.lastIndexOf('}');
-                        if (startIndex !== -1 && endIndex !== -1) return JSON.parse(jsonString.substring(startIndex, endIndex + 1));
-                        throw new Error("Không tìm thấy JSON hợp lệ trong phản hồi của AI.");
-                    } else {
-                         throw new Error(result.promptFeedback?.blockReason || "Phản hồi API không hợp lệ hoặc bị chặn.");
-                    }
-                } catch (error) {
-                    console.error("Lỗi khi gọi Gemini API:", error);
-                    throw error;
-                }
+                const errorData = await response.json();
+                throw new Error(`API call failed with status ${response.status}: ${JSON.stringify(errorData)}`);
             }
-
-            async function handleFileUpload(e) {
-                const file = e.target.files[0];
-                if (!file) return;
-                loaderOverlay.classList.remove('hidden');
-                loaderOverlay.classList.add('flex');
-                const reader = new FileReader();
-                const readFileAsDataURL = (file) => new Promise((resolve, reject) => {
-                    reader.onload = () => resolve(reader.result);
-                    reader.onerror = reject;
-                    reader.readAsDataURL(file);
-                });
-                try {
-                    const dataUrl = await readFileAsDataURL(file);
-                    const base64Data = dataUrl.split(',')[1];
-                    const aiResponse = await callGeminiGenerativeAPI({ fileName: file.name, base64Data: base64Data, rawMimeType: file.type });
-                    const newDocData = {
-                        title: aiResponse.title || file.name.split('.').slice(0, -1).join('.'),
-                        summary: aiResponse.summary || 'AI không thể tạo tóm tắt.',
-                        issueDate: aiResponse.issueDate || new Date().toISOString().slice(0, 10),
-                        dueDate: aiResponse.dueDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-                        lanhDao: aiResponse.lanhDao || '',
-                        phongBan: aiResponse.phongBan || '',
-                        chuyenVien: aiResponse.chuyenVien || '',
-                        phongBanPhoiHop: aiResponse.phongBanPhoiHop || '',
-                        chuyenVienPhoiHop: aiResponse.chuyenVienPhoiHop || '',
-                        status: 'pending',
-                        priority: aiResponse.priority || 'Thường',
-                    };
-                    openModal(newDocData);
-                } catch (error) {
-                    openModal({ title: `Lỗi Phân Tích Tệp`, summary: `AI không thể phân tích. Lỗi: ${error.message}` });
-                } finally {
-                    loaderOverlay.classList.add('hidden');
-                    loaderOverlay.classList.remove('flex');
-                    fileUploadInput.value = '';
-                }
+            const result = await response.json();
+            if (result.candidates && result.candidates[0].content.parts[0].text) {
+                let textResponse = result.candidates[0].content.parts[0].text;
+                const jsonMatch = textResponse.match(/```json\s*([\s\S]*?)\s*```/);
+                let jsonString = jsonMatch ? jsonMatch[1] : textResponse;
+                const startIndex = jsonString.indexOf('{');
+                const endIndex = jsonString.lastIndexOf('}');
+                if (startIndex !== -1 && endIndex !== -1) return JSON.parse(jsonString.substring(startIndex, endIndex + 1));
+                throw new Error("Không tìm thấy JSON hợp lệ trong phản hồi của AI.");
+            } else {
+                 throw new Error(result.promptFeedback?.blockReason || "Phản hồi API không hợp lệ hoặc bị chặn.");
             }
+        } catch (error) {
+            console.error("Lỗi khi gọi Gemini API:", error);
+            throw error;
+        }
+    }
 
-            async function handleTextAnalysis() {
-                const content = textAnalysisInput.value.trim();
-                if (!content) return;
-                closeTextAnalysisModal();
-                loaderOverlay.classList.remove('hidden');
-                loaderOverlay.classList.add('flex');
-                try {
-                    const aiResponse = await callGeminiGenerativeAPI({ textContent: content });
-                    const newDocData = {
-                        title: aiResponse.title || 'Công việc từ phân tích văn bản',
-                        summary: aiResponse.summary || 'AI không thể tạo tóm tắt.',
-                        issueDate: aiResponse.issueDate || new Date().toISOString().slice(0, 10),
-                        dueDate: aiResponse.dueDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-                        lanhDao: aiResponse.lanhDao || '',
-                        phongBan: aiResponse.phongBan || '',
-                        chuyenVien: aiResponse.chuyenVien || '',
-                        phongBanPhoiHop: aiResponse.phongBanPhoiHop || '',
-                        chuyenVienPhoiHop: aiResponse.chuyenVienPhoiHop || '',
-                        status: 'pending',
-                        priority: aiResponse.priority || 'Thường',
-                    };
-                    openModal(newDocData);
-                } catch (error) {
-                    openModal({ title: 'Lỗi Phân Tích Văn bản', summary: `AI không thể phân tích. Lỗi: ${error.message}` });
-                } finally {
-                    loaderOverlay.classList.add('hidden');
-                    loaderOverlay.classList.remove('flex');
-                }
-            }
-            
-            function requestNotificationPermission() {
-                if ('Notification' in window && Notification.permission !== 'granted') Notification.requestPermission();
-            }
-
-            function checkAndSendNotifications() {
-                if (!('Notification' in window) || Notification.permission !== 'granted') return;
-                documents.filter(doc => doc.status === 'pending' && calculateDaysRemaining(doc.dueDate) <= 1 && calculateDaysRemaining(doc.dueDate) >= 0)
-                    .forEach(task => {
-                        const key = `notified-${task.id}`;
-                        if (!sessionStorage.getItem(key)) {
-                            new Notification('Nhắc nhở Công việc Sắp đến hạn', { body: `Công việc "${task.title}" sắp đến hạn.` });
-                            sessionStorage.setItem(key, 'true');
-                        }
-                    });
-            }
-
-            function openTextAnalysisModal() {
-                textAnalysisInput.value = '';
-                textAnalysisModal.classList.remove('hidden');
-                setTimeout(() => textAnalysisModal.querySelector('.transform')?.classList.remove('scale-95', 'opacity-0'), 10);
-            }
-
-            function closeTextAnalysisModal() {
-                textAnalysisModal.querySelector('.transform')?.classList.add('scale-95', 'opacity-0');
-                setTimeout(() => textAnalysisModal.classList.add('hidden'), 300);
-            }
-
-            // =============================================================
-            // KHỞI TẠO ỨNG DỤNG
-            // =============================================================
-            async function initializeApp() {
-                currentUserRole = sessionStorage.getItem('userRole');
-                if (currentUserRole) {
-                    loginScreen.classList.add('hidden');
-                    appScreen.classList.remove('hidden');
-                    
-                    await loadDocuments(); // Dùng await để chờ tải xong dữ liệu
-                    
-                    populateAllDropdowns();
-                    applyPermissions();
-                    
-                    const populateChuyenVienForSelect = (phongBanSelect, chuyenVienSelect) => {
-                        const selectedPhongBanName = phongBanSelect.value;
-                        const manager = allPersonnel.find(p => p.name === selectedPhongBanName);
-                        let chuyenVienOptions = allPersonnel.filter(p => p.rank > 4);
-                        if (manager) chuyenVienOptions = allPersonnel.filter(p => p.rank > 4 && p.department === manager.department);
-                        chuyenVienSelect.innerHTML = '<option value="">-- Chọn --</option>' + chuyenVienOptions.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
-                    };
-
-                    selectPhongBan.addEventListener('change', () => populateChuyenVienForSelect(selectPhongBan, selectChuyenVien));
-                    selectPhongBanPhoiHop.addEventListener('change', () => populateChuyenVienForSelect(selectPhongBanPhoiHop, selectChuyenVienPhoiHop));
-
-                    kpiTotalCard.addEventListener('click', () => { statusFilter.value = 'all'; renderDocuments(); });
-                    kpiCompletedCard.addEventListener('click', () => { statusFilter.value = 'completed'; renderDocuments(); });
-                    kpiPendingCard.addEventListener('click', () => { statusFilter.value = 'pending'; renderDocuments(); });
-                    kpiOverdueCard.addEventListener('click', () => { statusFilter.value = 'overdue'; renderDocuments(); });
-                    if (currentUserRole === 'admin') {
-                        addDocAIBtn.addEventListener('click', () => fileUploadInput.click());
-                        addDocManualBtn.addEventListener('click', () => openModal());
-                        addTextAIBtn.addEventListener('click', openTextAnalysisModal);
-                        submitTextAnalysisBtn.addEventListener('click', handleTextAnalysis); // Dòng đã được bổ sung
-                        fileUploadInput.addEventListener('change', handleFileUpload);
-                        docForm.addEventListener('submit', handleSubmit);
-                        notesForm.addEventListener('submit', handleSaveNote);
-                        requestNotificationPermission();
-                        setInterval(checkAndSendNotifications, 60 * 1000 * 30);
-                        checkAndSendNotifications();
-                    }
-                    [searchInput, statusFilter, phongbanFilter, chuyenvienFilter].forEach(el => el?.addEventListener('input', renderDocuments));
-                    exportReportBtn.addEventListener('click', openExportModal);
-                    document.querySelectorAll('.export-option-btn').forEach(btn => btn.addEventListener('click', (e) => handleExportReport(e.currentTarget.dataset.type)));
-                    closeModalBtn.addEventListener('click', closeModal);
-                    cancelBtn.addEventListener('click', closeModal);
-                    modal.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeModal(); });
-                    closeNotesModalBtn.addEventListener('click', closeNotesModal);
-                    cancelNotesBtn.addEventListener('click', closeNotesModal);
-                    notesModal.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeNotesModal(); });
-                    closeTextModalBtn.addEventListener('click', closeTextAnalysisModal);
-                    cancelTextAnalysisBtn.addEventListener('click', closeTextAnalysisModal);
-                    textAnalysisModal.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeTextAnalysisModal(); });
-                    closeExportModalBtn.addEventListener('click', closeExportModal);
-                    cancelExportBtn.addEventListener('click', closeExportModal);
-                    exportModal.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeExportModal(); });
-                    logoutBtn.addEventListener('click', handleLogout);
-                    Object.keys(sortHeaders).forEach(key => sortHeaders[key].addEventListener('click', () => setSort(key)));
-                } else {
-                    loginScreen.classList.remove('hidden');
-                    appScreen.classList.add('hidden');
-                    loginForm.addEventListener('submit', handleLogin);
-                }
-            }
-            initializeApp();
+    async function handleFileUpload(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        loaderOverlay.classList.remove('hidden');
+        loaderOverlay.classList.add('flex');
+        const reader = new FileReader();
+        const readFileAsDataURL = (file) => new Promise((resolve, reject) => {
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
         });
-    </script>
+        try {
+            const dataUrl = await readFileAsDataURL(file);
+            const base64Data = dataUrl.split(',')[1];
+            const aiResponse = await callGeminiGenerativeAPI({ fileName: file.name, base64Data: base64Data, rawMimeType: file.type });
+            openModal(aiResponse);
+        } catch (error) {
+            openModal({ title: `Lỗi Phân Tích Tệp`, summary: `AI không thể phân tích. Lỗi: ${error.message}` });
+        } finally {
+            loaderOverlay.classList.add('hidden');
+            loaderOverlay.classList.remove('flex');
+            fileUploadInput.value = '';
+        }
+    }
+
+    async function handleTextAnalysis() {
+        const content = textAnalysisInput.value.trim();
+        if (!content) return;
+        closeTextAnalysisModal();
+        loaderOverlay.classList.remove('hidden');
+        loaderOverlay.classList.add('flex');
+        try {
+            const aiResponse = await callGeminiGenerativeAPI({ textContent: content });
+            openModal(aiResponse);
+        } catch (error) {
+            openModal({ title: 'Lỗi Phân Tích Văn bản', summary: `AI không thể phân tích. Lỗi: ${error.message}` });
+        } finally {
+            loaderOverlay.classList.add('hidden');
+            loaderOverlay.classList.remove('flex');
+        }
+    }
+    
+    function requestNotificationPermission() {
+        if ('Notification' in window && Notification.permission !== 'granted') Notification.requestPermission();
+    }
+
+    function checkAndSendNotifications() {
+        if (!('Notification' in window) || Notification.permission !== 'granted') return;
+        documents.filter(doc => doc.status === 'pending' && calculateDaysRemaining(doc.dueDate) <= 1 && calculateDaysRemaining(doc.dueDate) >= 0)
+            .forEach(task => {
+                const key = `notified-${task.id}`;
+                if (!sessionStorage.getItem(key)) {
+                    new Notification('Nhắc nhở Công việc Sắp đến hạn', { body: `Công việc "${task.title}" sắp đến hạn.` });
+                    sessionStorage.setItem(key, 'true');
+                }
+            });
+    }
+
+    function openTextAnalysisModal() {
+        textAnalysisInput.value = '';
+        textAnalysisModal.classList.remove('hidden');
+        setTimeout(() => textAnalysisModal.querySelector('.transform')?.classList.remove('scale-95', 'opacity-0'), 10);
+    }
+
+    function closeTextAnalysisModal() {
+        textAnalysisModal.querySelector('.transform')?.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => textAnalysisModal.classList.add('hidden'), 300);
+    }
+
+    // =============================================================
+    // KHỞI TẠO ỨNG DỤNG
+    // =============================================================
+    async function startApplication() {
+        currentUserRole = sessionStorage.getItem('userRole');
+        if (currentUserRole) {
+            loginScreen.classList.add('hidden');
+            appScreen.classList.remove('hidden');
+            
+            await loadDocuments();
+            
+            populateAllDropdowns();
+            applyPermissions();
+            
+            const populateChuyenVienForSelect = (phongBanSelect, chuyenVienSelect) => {
+                const selectedPhongBanName = phongBanSelect.value;
+                const manager = allPersonnel.find(p => p.name === selectedPhongBanName);
+                let chuyenVienOptions = allPersonnel.filter(p => p.rank > 4);
+                if (manager) chuyenVienOptions = allPersonnel.filter(p => p.rank > 4 && p.department === manager.department);
+                chuyenVienSelect.innerHTML = '<option value="">-- Chọn --</option>' + chuyenVienOptions.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+            };
+
+            selectPhongBan.addEventListener('change', () => populateChuyenVienForSelect(selectPhongBan, selectChuyenVien));
+            selectPhongBanPhoiHop.addEventListener('change', () => populateChuyenVienForSelect(selectPhongBanPhoiHop, selectChuyenVienPhoiHop));
+
+            kpiTotalCard.addEventListener('click', () => { statusFilter.value = 'all'; renderDocuments(); });
+            kpiCompletedCard.addEventListener('click', () => { statusFilter.value = 'completed'; renderDocuments(); });
+            kpiPendingCard.addEventListener('click', () => { statusFilter.value = 'pending'; renderDocuments(); });
+            kpiOverdueCard.addEventListener('click', () => { statusFilter.value = 'overdue'; renderDocuments(); });
+            if (currentUserRole === 'admin') {
+                addDocAIBtn.addEventListener('click', () => fileUploadInput.click());
+                addDocManualBtn.addEventListener('click', () => openModal());
+                addTextAIBtn.addEventListener('click', openTextAnalysisModal);
+                submitTextAnalysisBtn.addEventListener('click', handleTextAnalysis);
+                fileUploadInput.addEventListener('change', handleFileUpload);
+                docForm.addEventListener('submit', handleSubmit);
+                notesForm.addEventListener('submit', handleSaveNote);
+                requestNotificationPermission();
+                setInterval(checkAndSendNotifications, 60 * 1000 * 30);
+                checkAndSendNotifications();
+            }
+            [searchInput, statusFilter, phongbanFilter, chuyenvienFilter].forEach(el => el?.addEventListener('input', renderDocuments));
+            exportReportBtn.addEventListener('click', openExportModal);
+            document.querySelectorAll('.export-option-btn').forEach(btn => btn.addEventListener('click', (e) => handleExportReport(e.currentTarget.dataset.type)));
+            closeModalBtn.addEventListener('click', closeModal);
+            cancelBtn.addEventListener('click', closeModal);
+            modal.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeModal(); });
+            closeNotesModalBtn.addEventListener('click', closeNotesModal);
+            cancelNotesBtn.addEventListener('click', closeNotesModal);
+            notesModal.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeNotesModal(); });
+            closeTextModalBtn.addEventListener('click', closeTextAnalysisModal);
+            cancelTextAnalysisBtn.addEventListener('click', closeTextAnalysisModal);
+            textAnalysisModal.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeTextAnalysisModal(); });
+            closeExportModalBtn.addEventListener('click', closeExportModal);
+            cancelExportBtn.addEventListener('click', closeExportModal);
+            exportModal.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeExportModal(); });
+            logoutBtn.addEventListener('click', handleLogout);
+            Object.keys(sortHeaders).forEach(key => sortHeaders[key].addEventListener('click', () => setSort(key)));
+        } else {
+            loginScreen.classList.remove('hidden');
+            appScreen.classList.add('hidden');
+            loginForm.addEventListener('submit', handleLogin);
+        }
+    }
+    
+    // Initial check when the script loads
+    startApplication();
+</script>
 </body>
 </html>
