@@ -588,6 +588,7 @@
             documents = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         } catch (error) {
             console.error("Lỗi khi tải dữ liệu từ Firebase: ", error);
+    console.error("LỖI CHI TIẾT TỪ API:", error); // Ghi lại toàn bộ lỗi để kiểm tra
             alert("Không thể kết nối đến cơ sở dữ liệu. Vui lòng kiểm tra lại kết nối mạng.");
             documents = []; // Reset về mảng rỗng nếu lỗi
         }
