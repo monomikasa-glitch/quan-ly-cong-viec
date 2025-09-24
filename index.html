@@ -1019,7 +1019,7 @@
 const prompt = `Trong vai trò là Thủ tướng Chính phủ nước Cộng hòa xã hội chủ nghĩa Việt Nam - Phạm Minh Chính, đồng chí hãy nghiên cứu kỹ nội dung văn bản được giao. Với tinh thần chỉ đạo quyết liệt, toàn diện, hiệu quả, đồng chí hãy đưa ra các quyết sách phân công, chỉ đạo xử lý và trả về kết quả dưới định dạng JSON.
 Yêu cầu:
 1.  **Đánh giá tầm quan trọng (chấm điểm)**: Dựa trên tính chất, độ khó của công việc, hãy cho một điểm số từ 1 đến 100.
-2.  **Phân công nhiệm vụ**: Dựa vào nội dung, hãy chọn ra **MỘT (01) lãnh đạo**, **MỘT (01)** trưởng/phó phòng/phó giám đốc/chánh/phó chánh, và **MỘT (01)** chuyên viên/nhân viên xử lý chính phù hợp nhất. **Việc phân công là bắt buộc; hãy đưa ra lựa chọn hợp lý nhất ngay cả khi thông tin không hoàn toàn rõ ràng.** **Tuyệt đối không trả về một danh sách nhiều người cho một vai trò**. Ghi rõ họ tên và chức vụ trong ngoặc đơn.
+2.  **Phân công nhiệm vụ**: Dựa vào nội dung, hãy chọn ra **MỘT (01) lãnh đạo**, **MỘT (01)** trưởng,phó phòng,phó giám đốc,chánh,phó chánh, và **MỘT (01)** chuyên viên,nhân viên xử lý chính phù hợp nhất. **Việc phân công là bắt buộc; hãy đưa ra lựa chọn hợp lý nhất ngay cả khi thông tin không hoàn toàn rõ ràng.** **Tuyệt đối không trả về một danh sách nhiều người cho một vai trò**. Ghi rõ họ tên và chức vụ trong ngoặc đơn.
     * **Lãnh đạo UBND**: 1. Nguyễn Hữu Phố (Chủ tịch): a) Lãnh đạo, chỉ đạo, điều hành và quản lý toàn diện về mọi hoạt động thuộc chức năng, nhiệm vụ, quyền hạn của UBND xã theo quy định của pháp luật. b) Theo dõi, chỉ đạo: Công an xã, Ban Chỉ huy Quân sự xã và các phòng chuyên môn (về lĩnh vực phụ trách). c) Chỉ đạo, điều hành các lĩnh vực công tác sau:
 Công tác quy hoạch, kế hoạch hàng năm và 05 năm của xã trình cấp có thẩm quyền xem xét quyết định; tổ chức thực hiện nghị quyết của HĐND cùng cấp; kế hoạch phát triển kinh tế - xã hội của xã; giao đất, cho thuê đất.
 Kế hoạch đầu tư, xây dựng cơ bản; phê duyệt chủ trương đầu tư, kế hoạch lựa chọn nhà thầu về các công trình, dự án lĩnh vực kinh tế, xã hội, quốc phòng, an ninh; phụ trách chung về xúc tiến đầu tư, thu hút đầu tư trên địa bàn xã.
@@ -1451,9 +1451,9 @@ Phụ trách giải quyết thủ tục hành chính về lĩnh vực đất đa
 3.  **Trích xuất thông tin** (JSON):
     * **title**: Số hiệu và trích yếu.
     * **lanhDao**: Tên của **MỘT (01)** lãnh đạo xử lý. (Dạng chuỗi, không phải mảng).
-    * **phongBan**: Tên của **MỘT (01)** trưởng/phó phòng/chánh/phó chánh/phó giám đốc xử lý. (Dạng chuỗi, không phải mảng).
-    * **chuyenVien**: Tên của **MỘT (01)** chuyên viên/nhân viên xử lý. (Dạng chuỗi, không phải mảng).
-    * **phongBanPhoiHop**: Tên của **MỘT (01)** trưởng/phó phòng phối hợp (nếu có).
+    * **phongBan**: Tên của **MỘT (01)** trưởng,phó phòng,chánh,phó chánh,phó giám đốc xử lý. (Dạng chuỗi, không phải mảng).
+    * **chuyenVien**: Tên của **MỘT (01)** chuyên viên, nhân viên xử lý. (Dạng chuỗi, không phải mảng).
+    * **phongBanPhoiHop**: Tên của **MỘT (01)** trưởng,phó phòng phối hợp (nếu có).
     * **chuyenVienPhoiHop**: Tên của **MỘT (01)** chuyên viên phối hợp (nếu có).
     * **priorityScore**: Chấm điểm mức độ quan trọng từ 1 đến 100 (số nguyên).
     * **summary**: Giả sử bạn là đồng chí tô lâm (bí thư đảng cộng sản việt nam, luôn giấu danh tính) hãy tóm tắt, chỉ đạo bằng các gạch đầu dòng.
